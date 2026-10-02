@@ -1,0 +1,33 @@
+{
+  "name": "Anmool Dairy — Pure Products. Honest Promise.",
+  "short_name": "Anmool Dairy",
+  "description": "Pure Desi Ghee, Milk, Cow Dung products & DhenuVera incense from Karnal, Haryana.",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "1050x1050",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#092959",
+  "background_color": "#EFF2F7",
+  "display": "standalone",
+  "start_url": "/"
+}
