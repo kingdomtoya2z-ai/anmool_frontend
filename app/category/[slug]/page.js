@@ -7,7 +7,7 @@ export async function generateStaticParams() {
   try {
     const base =
       process.env.NEXT_PUBLIC_API_URL ||
-      'https://anmoolbackend-production.up.railway.app/api';
+      'https://anmoolbackend-production-4640.up.railway.app/api';
     const res = await fetch(`${base}/categories`, { cache: 'no-store' });
     if (!res.ok) return [];
     const data = await res.json();
