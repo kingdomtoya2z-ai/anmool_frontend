@@ -31,6 +31,22 @@ export default function CategoryPage() {
   const children = category
     ? allCats.filter((c) => String(c.parent?._id || c.parent || '') === String(category._id))
     : [];
+  // Full ancestor trail at any depth (Home / L1 / L2 / … / current)
+  const byId = {};
+  allCats.forEach((c) => { byId[String(c._id)] = c; });
+  const trail = [];
+  let cur = category;
+  let guard = 0;
+  while (cur && guard++ < 50) {
+    trail.unshift(cur);
+    const pid = String(cur.parent?._id || cur.parent || '');
+    cur = pid ? byId[pid] : null;
+  }
+  const breadcrumb = trail.map((a) =>
+    a.slug && a.slug !== category?.slug
+      ? { label: a.name, href: `/category/${a.slug}` }
+      : { label: a.name }
+  );
 
   return (
     <div className="max-w-[1400px] mx-auto px-4 py-6">
@@ -38,7 +54,7 @@ export default function CategoryPage() {
         eyebrow="CATEGORY"
         title={name}
         description={category?.description || 'Explore authentic products carefully sourced with purity and trust.'}
-        breadcrumb={[{ label: name }]}
+        breadcrumb={breadcrumb}
         meta={
           <span className="inline-block text-xs bg-white/15 border border-white/20 rounded-full px-3 py-1.5">
             {products.length} Product{products.length === 1 ? '' : 's'} • Free shipping above ₹300

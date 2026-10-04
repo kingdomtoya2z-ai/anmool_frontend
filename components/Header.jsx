@@ -312,33 +312,7 @@ export default function Header() {
                   {subs.length>0 && (
                     <div className={`absolute left-0 top-full spiritual-card rounded-2xl shadow-2xl min-w-[240px] py-2 z-30 animate-fadeIn overflow-visible ${openMenu === cat._id ? 'block' : 'hidden'}`}>
                       <div className="px-4 pt-2 pb-1 text-[11px] font-bold tracking-[0.2em] text-sacred-saffron">SUB-CATEGORIES</div>
-                      {subs.map(s=> {
-                        const kids = getSubs(s._id);
-                        const subActive = isActive(`/category/${s.slug}`);
-                        if (!kids.length) {
-                          return (
-                            <Link key={s._id} href={`/category/${s.slug}`} className={`group/sublink flex items-center justify-between gap-2 px-4 py-2.5 text-[17px] transition ${subActive ? 'bg-sacred-maroon text-white font-semibold' : 'hover:bg-sacred-sandal hover:text-sacred-maroon'}`}>
-                              <span>{s.name}</span>
-                              <IconArrowRight className="w-4 h-4 opacity-0 -translate-x-1 group-hover/sublink:opacity-100 group-hover/sublink:translate-x-0 transition" />
-                            </Link>
-                          );
-                        }
-                        return (
-                          <div key={s._id} className="relative group/sub">
-                            <Link href={`/category/${s.slug}`} className={`flex items-center justify-between gap-2 px-4 py-2.5 text-[17px] transition ${subActive ? 'bg-sacred-maroon text-white font-semibold' : 'hover:bg-sacred-sandal hover:text-sacred-maroon'}`}>
-                              <span>{s.name}</span>
-                              <IconArrowRight className="w-3.5 h-3.5 opacity-50" />
-                            </Link>
-                            <div className="absolute left-full top-0 hidden group-hover/sub:block spiritual-card rounded-2xl shadow-2xl min-w-[210px] py-2 z-40 animate-fadeIn overflow-hidden ml-0.5">
-                              {kids.map(k=> (
-                                <Link key={k._id} href={`/category/${k.slug}`} className={`block px-4 py-2 text-[15px] transition ${isActive(`/category/${k.slug}`) ? 'bg-sacred-maroon text-white font-semibold' : 'hover:bg-sacred-sandal hover:text-sacred-maroon'}`}>
-                                  {k.name}
-                                </Link>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {subs.map(s => <DropNode key={s._id} node={s} depth={1} getSubs={getSubs} isActive={isActive} />)}
                     </div>
                   )}
                 </div>
@@ -422,21 +396,14 @@ export default function Header() {
                       </div>
                       {expanded && subs.length>0 && (
                         <div className="ml-6 mt-1 mb-2 space-y-2.5">
-                          {subs.map(s=> {
-                            const kids = getSubs(s._id);
-                            return (
-                              <div key={s._id}>
-                                <Link href={`/category/${s.slug}`} onClick={()=>setMobileMenu(false)} className={`inline-block text-[15px] font-semibold px-3 py-1.5 rounded-full border ${isActive(`/category/${s.slug}`) ? 'bg-sacred-maroon text-white border-sacred-maroon' : 'bg-smoke-100 border-sacred-saffron/30 text-sacred-deepmaroon'}`}>{s.name}</Link>
-                                {kids.length>0 && (
-                                  <div className="ml-4 mt-1.5 flex flex-wrap gap-1.5">
-                                    {kids.map(k=> (
-                                      <Link key={k._id} href={`/category/${k.slug}`} onClick={()=>setMobileMenu(false)} className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${isActive(`/category/${k.slug}`) ? 'bg-sacred-maroon text-white border-sacred-maroon' : 'bg-white border-stone-200 text-stone-600'}`}>{k.name}</Link>
-                                    ))}
-                                  </div>
-                                )}
+                          {subs.map(s=> (
+                            <div key={s._id}>
+                              <Link href={`/category/${s.slug}`} onClick={()=>setMobileMenu(false)} className={`inline-block text-[15px] font-semibold px-3 py-1.5 rounded-full border ${isActive(`/category/${s.slug}`) ? 'bg-sacred-maroon text-white border-sacred-maroon' : 'bg-smoke-100 border-sacred-saffron/30 text-sacred-deepmaroon'}`}>{s.name}</Link>
+                              <div className="mt-1.5">
+                                <MobileKids nodes={getSubs(s._id)} depth={1} getSubs={getSubs} isActive={isActive} onNav={()=>setMobileMenu(false)} />
                               </div>
-                            );
-                          })}
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -468,6 +435,56 @@ export default function Header() {
         )}
       </header>
     </>
+  );
+}
+
+/* Recursive dropdown node — renders sub-categories to unlimited depth.
+   Each level opens its own flyout on hover (own state, no CSS-class tricks). */
+function DropNode({ node, depth, getSubs, isActive }) {
+  const [open, setOpen] = useState(false);
+  const kids = depth > 8 ? [] : getSubs(node._id);
+  const active = isActive(`/category/${node.slug}`);
+  const textCls = depth === 1 ? 'text-[17px]' : 'text-[15px]';
+  if (!kids.length) {
+    return (
+      <Link href={`/category/${node.slug}`} className={`group/sublink flex items-center justify-between gap-2 px-4 py-2.5 ${textCls} transition ${active ? 'bg-sacred-maroon text-white font-semibold' : 'hover:bg-sacred-sandal hover:text-sacred-maroon'}`}>
+        <span className="truncate">{node.name}</span>
+        <IconArrowRight className="w-4 h-4 shrink-0 opacity-0 -translate-x-1 group-hover/sublink:opacity-100 group-hover/sublink:translate-x-0 transition" />
+      </Link>
+    );
+  }
+  return (
+    <div className="relative" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <Link href={`/category/${node.slug}`} className={`flex items-center justify-between gap-2 px-4 py-2.5 ${textCls} transition ${active ? 'bg-sacred-maroon text-white font-semibold' : 'hover:bg-sacred-sandal hover:text-sacred-maroon'}`}>
+        <span className="truncate">{node.name}</span>
+        <IconArrowRight className="w-3.5 h-3.5 shrink-0 opacity-50" />
+      </Link>
+      {open && (
+        <div className="absolute left-full top-0 spiritual-card rounded-2xl shadow-2xl min-w-[210px] py-2 z-40 animate-fadeIn ml-0.5 max-h-[70vh] overflow-y-auto">
+          {kids.map(k => <DropNode key={k._id} node={k} depth={depth + 1} getSubs={getSubs} isActive={isActive} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Recursive mobile sub-tree — indented chips at any depth, tap drills via pages. */
+function MobileKids({ nodes, depth, getSubs, isActive, onNav }) {
+  if (!nodes.length || depth > 8) return null;
+  return (
+    <div className="flex flex-col gap-1.5" style={depth > 0 ? { marginLeft: 12, borderLeft: '2px solid rgba(245,165,36,0.25)', paddingLeft: 8 } : undefined}>
+      {nodes.map(n => {
+        const kids = getSubs(n._id);
+        return (
+          <div key={n._id}>
+            <Link href={`/category/${n.slug}`} onClick={onNav} className={`inline-block text-[15px] font-semibold px-3 py-1.5 rounded-full border ${isActive(`/category/${n.slug}`) ? 'bg-sacred-maroon text-white border-sacred-maroon' : 'bg-smoke-100 border-sacred-saffron/30 text-sacred-deepmaroon'}`}>{n.name}</Link>
+            <div className="mt-1.5">
+              <MobileKids nodes={kids} depth={depth + 1} getSubs={getSubs} isActive={isActive} onNav={onNav} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

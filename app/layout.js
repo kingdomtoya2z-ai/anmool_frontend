@@ -6,6 +6,7 @@ import { AuthProvider } from '@/lib/authContext';
 import { CartProvider } from '@/lib/cartContext';
 import { Toaster } from 'react-hot-toast';
 import BackButtonHandler from '@/components/BackButtonHandler';
+import BhajanPlayer from '@/components/BhajanPlayer';
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.anmooldairy.com'),
@@ -34,6 +35,7 @@ export default function RootLayout({ children }) {
         <AuthProvider>
           <CartProvider>
             <BackButtonHandler />
+            <BhajanPlayer />
             <Toaster position="top-right" toastOptions={{ duration: 3000, style:{ fontSize:'14px' } }} />
             <SpiritualBackground />
             <div className="relative z-10">

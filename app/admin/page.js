@@ -50,6 +50,66 @@ function Field({ label, children, className = '' }) {
 const inputCls = 'w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white';
 
 /* ------------------------------------------------------------------ */
+/*  Category tree helpers (unlimited depth)                            */
+/* ------------------------------------------------------------------ */
+const catIdStr = (v) => String(v || '');
+const parentIdOf = (c) => catIdStr(c?.parent?._id || c?.parent || '');
+
+function childrenOf(categories, parentId) {
+  return (categories || []).filter((c) => parentIdOf(c) === catIdStr(parentId || ''));
+}
+function isLeafCat(categories, id) {
+  return childrenOf(categories, id).length === 0;
+}
+function descendantIds(categories, id) {
+  const out = [];
+  let frontier = [catIdStr(id)];
+  let guard = 0;
+  while (frontier.length && guard++ < 1000) {
+    const next = [];
+    for (const c of categories || []) {
+      if (frontier.includes(parentIdOf(c)) && !out.includes(catIdStr(c._id))) {
+        out.push(catIdStr(c._id));
+        next.push(catIdStr(c._id));
+      }
+    }
+    frontier = next;
+  }
+  return out;
+}
+// Depth-first ordered list: [{ cat, depth }]
+function treeOrder(categories) {
+  const byId = {};
+  (categories || []).forEach((c) => { byId[catIdStr(c._id)] = c; });
+  const out = [];
+  const visit = (id, depth) => {
+    for (const c of childrenOf(categories, id)) {
+      out.push({ cat: c, depth });
+      visit(c._id, depth + 1);
+    }
+  };
+  visit('', 0);
+  // Orphans (bad parent refs) still listed at the end
+  for (const c of categories || []) {
+    if (!out.find((o) => catIdStr(o.cat._id) === catIdStr(c._id))) out.push({ cat: c, depth: 0 });
+  }
+  return out;
+}
+function pathLabel(categories, id) {
+  const byId = {};
+  (categories || []).forEach((c) => { byId[catIdStr(c._id)] = c; });
+  const parts = [];
+  let cur = byId[catIdStr(id)];
+  let guard = 0;
+  while (cur && guard++ < 100) {
+    parts.unshift(cur.name);
+    const pid = parentIdOf(cur);
+    cur = pid ? byId[pid] : null;
+  }
+  return parts.join(' › ');
+}
+
+/* ------------------------------------------------------------------ */
 /*  Admin Dashboard                                                    */
 /* ------------------------------------------------------------------ */
 
@@ -775,7 +835,15 @@ function CategoriesTab({ categories, onChanged }) {
   const [editingId, setEditingId] = useState(null);
   const [busyId, setBusyId] = useState(null);
 
-  const topCats = categories.filter(c => !c.parent);
+  // When editing, a category can't be moved under itself or its own descendants
+  const forbiddenIds = editingId ? [catIdStr(editingId), ...descendantIds(categories, editingId)] : [];
+  const parentOptions = treeOrder(categories).filter((o) => !forbiddenIds.includes(catIdStr(o.cat._id)));
+
+  const startSub = (cat) => {
+    resetForm();
+    setForm((f) => ({ ...f, parent: catIdStr(cat._id) }));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const resetForm = () => { setForm({ name: '', description: '', parent: '', image: '' }); setFile(null); setPreview(''); setEditingId(null); };
 
@@ -818,10 +886,11 @@ function CategoriesTab({ categories, onChanged }) {
   };
 
   const remove = async (cat) => {
-    const hasChildren = categories.some(c => (c.parent?._id || c.parent) === cat._id);
-    const msg = hasChildren
-      ? `Delete "${cat.name}" and move its ${categories.filter(c => (c.parent?._id || c.parent) === cat._id).length} sub-categor(ies) to top level?`
-      : `Delete category "${cat.name}"?`;
+    const kids = childrenOf(categories, cat._id);
+    const leaf = kids.length === 0;
+    const msg = !leaf
+      ? `Delete "${cat.name}"? Its ${kids.length} sub-categor(ies) move up one level. (Blocked if any products live under it — move those products first.)`
+      : `Delete category "${cat.name}"? (Blocked if it holds products — move those products first.)`;
     if (!window.confirm(msg)) return;
     setBusyId(cat._id);
     try { await api.delete(`/categories/${cat._id}`); toast.success('Category deleted'); onChanged(); }
@@ -840,11 +909,16 @@ function CategoriesTab({ categories, onChanged }) {
             <Field label="Name *">
               <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Sambrani Cup" className={inputCls} />
             </Field>
-            <Field label="Type">
+            <Field label="Parent (any level — leave empty for top-level)">
               <select value={form.parent} onChange={e => setForm({ ...form, parent: e.target.value })} className={inputCls}>
                 <option value="">Top-level category</option>
-                {topCats.map(c => <option key={c._id} value={c._id}>Sub-category of {c.name}</option>)}
+                {parentOptions.map(o => (
+                  <option key={o.cat._id} value={o.cat._id}>
+                    {'— '.repeat(Math.min(o.depth, 6))}{o.cat.name}{isLeafCat(categories, o.cat._id) ? '' : `  (${childrenOf(categories, o.cat._id).length} sub)`}
+                  </option>
+                ))}
               </select>
+              <p className="text-[11px] text-gray-400 mt-1">Depth is unlimited — pick any category as parent to nest deeper.</p>
             </Field>
             <Field label="Description">
               <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} placeholder="Short description" className={inputCls} />
@@ -875,18 +949,25 @@ function CategoriesTab({ categories, onChanged }) {
           <h3 className="font-bold text-lg mb-1">All Categories ({categories.length})</h3>
           <p className="text-xs text-gray-500 mb-4">These drive the homepage and the navbar menu automatically.</p>
           <div className="space-y-2">
-            {categories.map(c => {
-              const sub = c.parent?.name || (c.parent ? categories.find(x => x._id === c.parent)?.name : '');
+            {treeOrder(categories).map(({ cat: c, depth }) => {
+              const leaf = isLeafCat(categories, c._id);
+              const kidCount = childrenOf(categories, c._id).length;
               return (
-                <div key={c._id} className="flex flex-wrap items-center gap-3 border border-gray-100 rounded-xl p-3 hover:border-primary/20 transition">
+                <div key={c._id} className="flex flex-wrap items-center gap-3 border border-gray-100 rounded-xl p-3 hover:border-primary/20 transition" style={depth ? { marginLeft: `${Math.min(depth, 5) * 18}px` } : undefined}>
                   <SmartImage src={c.image} alt={c.name} className="w-12 h-12 rounded-xl object-cover border shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm flex items-center gap-2 min-w-0"><span className="truncate">{c.name}</span>
-                      {sub && <span className="shrink-0 text-[10px] bg-accent/10 text-accent-dark border border-accent/20 px-2 py-0.5 rounded-full font-bold uppercase">Sub · {sub}</span>}
+                    <div className="font-semibold text-sm flex flex-wrap items-center gap-2 min-w-0">
+                      {depth > 0 && <span className="text-stone-300 font-normal">└</span>}
+                      <span className="truncate">{c.name}</span>
+                      {depth > 0 && <span className="shrink-0 text-[10px] bg-stone-100 text-stone-500 border border-stone-200 px-2 py-0.5 rounded-full font-bold">L{depth + 1}</span>}
+                      {leaf
+                        ? <span className="shrink-0 text-[10px] bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full font-bold uppercase">Final · products go here</span>
+                        : <span className="shrink-0 text-[10px] bg-accent/10 text-accent-dark border border-accent/20 px-2 py-0.5 rounded-full font-bold uppercase">{kidCount} sub</span>}
                     </div>
-                    <div className="text-[11px] text-gray-500 break-all">/{c.slug} · {c.productCount || 0} product{c.productCount === 1 ? '' : 's'}</div>
+                    <div className="text-[11px] text-gray-500 break-all">/{c.slug} · {c.productCount || 0} product{c.productCount === 1 ? '' : 's'} · <span className="text-stone-400">{pathLabel(categories, c._id)}</span></div>
                   </div>
-                  <div className="flex gap-1.5 w-full sm:w-auto">
+                  <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
+                    <button onClick={() => startSub(c)} title="Add a sub-category under this one" className="flex-1 sm:flex-none text-xs font-bold px-3 py-1.5 rounded-full border border-sacred-saffron/50 text-sacred-maroon hover:bg-sacred-sandal transition">+ Sub</button>
                     <button onClick={() => startEdit(c)} className="flex-1 sm:flex-none text-xs font-bold px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-primary hover:text-primary">Edit</button>
                     <button onClick={() => remove(c)} disabled={busyId === c._id} className="flex-1 sm:flex-none text-xs font-bold px-3 py-1.5 rounded-full border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50">Delete</button>
                   </div>
@@ -910,7 +991,10 @@ function DhenuVeraTab({ categories, products, onChanged }) {
   const subs = parent
     ? categories.filter((c) => String(c.parent?._id || c.parent || '') === String(parent._id))
     : [];
-  const scopeIds = parent ? [String(parent._id), ...subs.map((s) => String(s._id))] : [];
+  const scopeIds = parent ? [catIdStr(parent._id), ...descendantIds(categories, parent._id)] : [];
+  const scopeLeaves = parent
+    ? categories.filter((c) => scopeIds.includes(catIdStr(c._id)) && isLeafCat(categories, c._id))
+    : [];
   const dhenuProducts = products.filter((p) => scopeIds.includes(String(p.category?._id || p.category || '')));
 
   // Parent-category form (only when no DhenuVera parent exists yet)
@@ -986,7 +1070,7 @@ function DhenuVeraTab({ categories, products, onChanged }) {
   const [prodEditingId, setProdEditingId] = useState(null);
   const [prodBusy, setProdBusy] = useState(false);
 
-  const resetProd = () => { setProdForm({ ...emptyProduct, category: subs[0]?._id || parent?._id || '' }); setProdFiles([]); setProdPreviews([]); setProdEditingId(null); };
+  const resetProd = () => { setProdForm({ ...emptyProduct, category: scopeLeaves[0]?._id || '' }); setProdFiles([]); setProdPreviews([]); setProdEditingId(null); };
   const startProdEdit = (p) => {
     setProdEditingId(p._id);
     setProdForm({
@@ -1035,7 +1119,7 @@ function DhenuVeraTab({ categories, products, onChanged }) {
     catch (err) { toast.error(err.response?.data?.message || 'Delete failed'); }
   };
 
-  const catOptions = parent ? [{ _id: String(parent._id), name: `${parent.name} (general)` }, ...subs] : [];
+  const catOptions = scopeLeaves;
 
   return (
     <div className="mt-6">
@@ -1142,10 +1226,10 @@ function DhenuVeraTab({ categories, products, onChanged }) {
               <Field label="Product Name *">
                 <input required value={prodForm.name} onChange={(e) => setProdForm({ ...prodForm, name: e.target.value })} placeholder="e.g. Sambrani Cup Guggal — Pack of 12" className={inputCls} />
               </Field>
-              <Field label="Sub-category *">
+              <Field label="Final Sub-category * (last level only)">
                 <select required value={prodForm.category} onChange={(e) => setProdForm({ ...prodForm, category: e.target.value })} className={inputCls}>
-                  <option value="">Select sub-category…</option>
-                  {catOptions.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+                  <option value="">Select final sub-category…</option>
+                  {catOptions.map((c) => <option key={c._id} value={c._id}>{pathLabel(categories, c._id)}</option>)}
                 </select>
               </Field>
               <div className="grid grid-cols-3 gap-3">
@@ -1490,11 +1574,15 @@ function ProductsTab({ categories, products, onChanged }) {
             <Field label="Product Name *">
               <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Sambrani Cup - Pack of 12" className={inputCls} />
             </Field>
-            <Field label="Category *">
+            <Field label="Final Category * (products live only on last-level categories)">
               <select required value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className={inputCls}>
-                <option value="">Select category…</option>
-                {flatCats.map(c => <option key={c._id} value={c._id}>{c.name}{c.parent?.name ? ` (${c.parent.name})` : ''}</option>)}
+                <option value="">Select final category…</option>
+                {form.category && !categories.some(c => catIdStr(c._id) === catIdStr(form.category) && isLeafCat(categories, c._id)) && (
+                  <option value={form.category}>{pathLabel(categories, form.category) || 'Current category'} (no longer final)</option>
+                )}
+                {categories.filter(c => isLeafCat(categories, c._id)).map(c => <option key={c._id} value={c._id}>{pathLabel(categories, c._id)}</option>)}
               </select>
+              <p className="text-[11px] text-gray-400 mt-1">Only last-level categories are listed — create deeper sub-categories first if needed.</p>
             </Field>
             <div className="grid grid-cols-3 gap-3">
               <Field label="Price ₹ *">
