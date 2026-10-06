@@ -106,9 +106,9 @@ export default function HeroSlider() {
               <img
                 src={s.image}
                 alt={s.title}
-                className="w-full h-[220px] sm:h-[320px] md:h-[440px] lg:h-[520px] object-cover"
+                className="w-full h-[300px] sm:h-[420px] md:h-[560px] lg:h-[620px] object-cover"
                 width={1600}
-                height={600}
+                height={700}
                 loading={i === 0 ? 'eager' : 'lazy'}
                 draggable={false}
               />
@@ -152,14 +152,14 @@ export default function HeroSlider() {
           <>
             <button
               onClick={() => go(idx - 1)}
-              className="absolute left-3 md:left-4 top-[38%] w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/30 backdrop-blur-md border border-white/40 text-white hover:bg-white hover:text-sacred-deepmaroon flex items-center justify-center transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-lg z-10 rotate-90"
+              className="absolute left-3 md:left-4 top-[40%] w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/30 backdrop-blur-md border border-white/40 text-white hover:bg-white hover:text-sacred-deepmaroon flex items-center justify-center transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-lg z-10 rotate-90"
               aria-label="Previous slide"
             >
               <IconChevronDown className="w-5 h-5" />
             </button>
             <button
               onClick={() => go(idx + 1)}
-              className="absolute right-3 md:right-4 top-[38%] w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/30 backdrop-blur-md border border-white/40 text-white hover:bg-white hover:text-sacred-deepmaroon flex items-center justify-center transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-lg z-10 -rotate-90"
+              className="absolute right-3 md:right-4 top-[40%] w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/30 backdrop-blur-md border border-white/40 text-white hover:bg-white hover:text-sacred-deepmaroon flex items-center justify-center transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-lg z-10 -rotate-90"
               aria-label="Next slide"
             >
               <IconChevronDown className="w-5 h-5" />
