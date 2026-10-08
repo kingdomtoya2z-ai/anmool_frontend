@@ -134,30 +134,80 @@ export default function Checkout() {
     );
   }
 
+  const loadRazorpay = () => new Promise((resolve, reject) => {
+    if (typeof window !== 'undefined' && window.Razorpay) return resolve(true);
+    const s = document.createElement('script');
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    s.onload = () => resolve(true);
+    s.onerror = () => reject(new Error('Could not load Razorpay — check your internet'));
+    document.body.appendChild(s);
+  });
+
+  const placeOrder = async (method, payId) => {
+    const orderRes = await api.post('/orders', {
+      items: cart.map(c=> ({ product: c.product, quantity: c.quantity })),
+      shippingAddress: form,
+      paymentMethod: method,
+      paymentId: payId,
+    });
+    clearCart();
+    toast.success('Order placed!');
+    setPlaced(orderRes.data);
+  };
+
+  // Real Razorpay flow: server creates the order (server-side total) →
+  // Razorpay modal collects payment → signature verified → order placed.
+  // If the modal is closed or payment fails, NO order is created.
+  const payOnlineWithRazorpay = async () => {
+    await loadRazorpay();
+    const { data } = await api.post('/orders/payment/razorpay/order', {
+      items: cart.map(c=> ({ product: c.product, quantity: c.quantity })),
+    });
+    return new Promise((resolve, reject) => {
+      const rzp = new window.Razorpay({
+        key: data.keyId,
+        amount: data.amount,
+        currency: data.currency || 'INR',
+        name: 'Anmool Dairy',
+        description: 'Order payment',
+        order_id: data.orderId,
+        prefill: { name: form.fullName || user.name || '', email: user.email || '', contact: form.phone || '' },
+        theme: { color: '#5C1A1B' },
+        modal: { ondismiss: () => reject(new Error('Payment cancelled — order was not placed')) },
+        handler: async (resp) => {
+          try {
+            const v = await api.post('/orders/payment/razorpay/verify', {
+              razorpay_order_id: resp.razorpay_order_id,
+              razorpay_payment_id: resp.razorpay_payment_id,
+              razorpay_signature: resp.razorpay_signature,
+            });
+            if (!v.data?.verified) throw new Error('Payment verification failed');
+            toast.success('Payment successful!');
+            await placeOrder('online', v.data.paymentId);
+            resolve(true);
+          } catch (err) {
+            reject(err);
+          }
+        },
+      });
+      rzp.on('payment.failed', (r) => reject(new Error(r.error?.description || 'Payment failed — order was not placed')));
+      rzp.open();
+    });
+  };
+
   const handlePay = async (e) => {
     e.preventDefault();
     if (!/^[6-9]\d{9}$/.test(form.phone)) { toast.error('Enter valid phone'); return; }
     if (!/^\d{6}$/.test(form.pincode)) { toast.error('Enter valid 6-digit pincode'); return; }
     setLoading(true);
     try {
-      // Simulate payment
-      let paymentId = 'COD';
-      if (paymentMethod === 'online') {
-        const payRes = await api.post('/orders/payment/simulate', { amount: total });
-        paymentId = payRes.data.paymentId;
-        toast.success('Payment successful!');
+      if (paymentMethod === 'cod') {
+        await placeOrder('cod', 'COD');
+      } else {
+        await payOnlineWithRazorpay();
       }
-      const orderRes = await api.post('/orders', {
-        items: cart.map(c=> ({ product: c.product, quantity: c.quantity })),
-        shippingAddress: form,
-        paymentMethod,
-        paymentId,
-      });
-      clearCart();
-      toast.success('Order placed!');
-      setPlaced(orderRes.data);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Order failed');
+      toast.error(err.response?.data?.message || err.message || 'Order failed');
     } finally { setLoading(false); }
   };
 
@@ -216,7 +266,7 @@ export default function Checkout() {
             <div className="grid grid-cols-2 gap-3">
               <label className={`border-2 rounded-2xl p-4 cursor-pointer flex items-center gap-3 ${paymentMethod==='online'?'border-primary bg-primary/5':'border-gray-100'}`}>
                 <input type="radio" checked={paymentMethod==='online'} onChange={()=>setPaymentMethod('online')} className="accent-primary" />
-                <div><div className="font-bold text-sm">Pay Online</div><div className="text-xs text-gray-500">Card / UPI (Simulated)</div></div>
+                <div><div className="font-bold text-sm">Pay Online</div><div className="text-xs text-gray-500">UPI / Card / Netbanking via Razorpay</div></div>
                 <span className="ml-auto text-primary"><IconCard className="w-5 h-5" /></span>
               </label>
               <label className={`border-2 rounded-2xl p-4 cursor-pointer flex items-center gap-3 ${paymentMethod==='cod'?'border-primary bg-primary/5':'border-gray-100'}`}>
