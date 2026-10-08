@@ -6,6 +6,7 @@ import { useCart } from '@/lib/cartContext';
 import api from '@/lib/api';
 import { useRouter, usePathname } from 'next/navigation';
 import { IconFlame, IconHome, IconPin, IconCart, IconArrowRight, IconLogout } from '@/components/icons';
+import BhajanButton from '@/components/BhajanButton';
 
 function Avatar({ user, size = 'md' }) {
   const cls = size === 'lg' ? 'w-10 h-10 text-lg' : 'w-8 h-8 text-sm';
@@ -99,7 +100,6 @@ export default function Header() {
 
   const mainCats = categories.filter(c => !c.parent);
   const getSubs = (parentId) => categories.filter(c => c.parent === parentId || c.parent?._id === parentId);
-  const dhenuCat = categories.find(c => /dhenu/i.test(c.name || '') && !c.parent);
 
   const submitSearch = (e) => {
     if (e) e.preventDefault();
@@ -140,7 +140,7 @@ export default function Header() {
       {results.slice(0,6).map(p=> (
         <Link key={p._id} href={`/product/${p.slug}`} className="flex gap-3 p-3 hover:bg-sacred-sandal/50 transition border-b border-stone-100 last:border-0">
           <span className="w-12 h-12 rounded-xl border border-sacred-maroon/10 overflow-hidden shrink-0 bg-smoke-100 flex items-center justify-center text-stone-300">
-            {p.images?.[0] ? <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover" /> : <span className="font-sacred text-lg">ॐ</span>}
+            {p.images?.[0] ? <img src={p.images[0]} alt={p.name} className="w-full h-full object-contain" /> : <span className="font-sacred text-lg">ॐ</span>}
           </span>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium line-clamp-1">{p.name}</div>
@@ -168,6 +168,7 @@ export default function Header() {
             <IconFlame className="w-4 h-4 text-sacred-diya animate-flicker" />
             <span className="font-semibold">Free Delivery above Rs.300/-</span>
             <span className="hidden md:inline opacity-70">| Shuddh • Pavitra • Vishwas</span>
+            <BhajanButton />
           </span>
           <div className="hidden lg:flex items-center gap-5 text-[13px]">
             <a href="tel:9034239674" className="flex items-center gap-1.5 hover:text-sacred-diya transition">
@@ -275,12 +276,6 @@ export default function Header() {
                   {cat.name}
                 </Link>
               ))}
-              <Link
-                href={dhenuCat ? `/category/${dhenuCat.slug}` : '/search?q=dhenuvera'}
-                className="shrink-0 text-[15px] font-bold px-5 py-2 rounded-full bg-gradient-to-r from-dhenu-saffron to-dhenu-flame text-white shadow"
-              >
-                DhenuVera
-              </Link>
             </div>
           </div>
 
@@ -318,13 +313,6 @@ export default function Header() {
                 </div>
               );
             })}
-            {/* DhenuVera highlight */}
-            <Link
-              href={dhenuCat ? `/category/${dhenuCat.slug}` : '/search?q=dhenuvera'}
-              className="ml-1 px-4 py-1.5 text-[17px] font-bold whitespace-nowrap rounded-full bg-gradient-to-r from-dhenu-saffron to-dhenu-flame text-white shadow hover:shadow-lg hover:scale-[1.02] transition flex items-center gap-1.5"
-            >
-              <IconFlame className="w-4 h-4 animate-flicker" /> DhenuVera
-            </Link>
             <Link href="/about" className={`px-4 py-2.5 text-[17px] whitespace-nowrap transition-all border-b-2 ${isActive('/about') ? 'font-semibold text-sacred-maroon border-sacred-saffron' : 'font-medium text-stone-700 hover:text-sacred-maroon border-transparent'}`}>About</Link>
             <Link href="/contact" className={`px-4 py-2.5 text-[17px] whitespace-nowrap transition-all border-b-2 ${isActive('/contact') ? 'font-semibold text-sacred-maroon border-sacred-saffron' : 'font-medium text-stone-700 hover:text-sacred-maroon border-transparent'}`}>Contact</Link>
             <Link href="/our-journey" className={`px-4 py-2.5 text-[17px] whitespace-nowrap transition-all border-b-2 ${isActive('/our-journey') ? 'font-semibold text-sacred-maroon border-sacred-saffron' : 'font-medium text-stone-700 hover:text-sacred-maroon border-transparent'}`}>Journey</Link>
@@ -363,7 +351,7 @@ export default function Header() {
                     {results.slice(0,5).map(p=> (
                       <Link key={p._id} href={`/product/${p.slug}`} onClick={()=>setMobileMenu(false)} className="flex gap-3 p-3 border-b border-stone-100 last:border-0">
                         <span className="w-11 h-11 rounded-xl border overflow-hidden shrink-0 bg-smoke-100 flex items-center justify-center">
-                          {p.images?.[0] ? <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover" /> : <span className="font-sacred text-sacred-maroon">ॐ</span>}
+                          {p.images?.[0] ? <img src={p.images[0]} alt={p.name} className="w-full h-full object-contain" /> : <span className="font-sacred text-sacred-maroon">ॐ</span>}
                         </span>
                         <div className="min-w-0"><div className="text-sm font-medium truncate">{p.name}</div><div className="text-xs text-sacred-maroon font-bold">₹{p.price}</div></div>
                       </Link>
@@ -371,13 +359,6 @@ export default function Header() {
                   </div>
                 )}
                 <MobileLink href="/" label={<span className="flex items-center gap-2"><IconHome className="w-[18px] h-[18px]" /> Home</span>} active={isActive('/')} onClick={()=>setMobileMenu(false)} />
-                <Link
-                  href={dhenuCat ? `/category/${dhenuCat.slug}` : '/search?q=dhenuvera'}
-                  onClick={()=>setMobileMenu(false)}
-                  className="flex items-center gap-2 px-3 py-3 rounded-xl font-bold bg-gradient-to-r from-dhenu-saffron to-dhenu-flame text-white shadow"
-                >
-                  <IconFlame className="w-5 h-5 animate-flicker" /> DhenuVera — Sacred Incense
-                </Link>
                 <div className="pt-2 text-[11px] font-bold tracking-[0.22em] text-sacred-saffron px-3">SHOP BY CATEGORY</div>
                 {mainCats.map(cat=> {
                   const subs = getSubs(cat._id);

@@ -7,7 +7,7 @@ const STEPS = [
   { n: '02', phase: 'The Foundation', icon: IconShield, title: 'We Earned Customer Trust', desc: 'Consistent service and listening to feedback. Every complaint made the next delivery better — trust became our real capital.' },
   { n: '03', phase: 'The Expansion', icon: IconFlame, title: 'We Expanded Into Desi Ghee', desc: 'Pure Desi Ghee across India through trusted sources. Customers loved the quality and taste — confidence to grow further.' },
   { n: '04', phase: 'The Roots', icon: IconLeaf, title: 'We Added Traditional Products', desc: 'Cow Dung Ash, Cow Dung Cakes and Havan–Pooja essentials — honouring the rituals Indian homes live by.' },
-  { n: '05', phase: 'Today', icon: IconHeart, title: 'Introducing DhenuVera', desc: 'Our sacred incense range: Cone Dhoop, Stick Dhoop and Sambrani Cups in 6 fragrances — Guggal, Mogra, Rose, Sandal and more.' },
+  { n: '05', phase: 'Today', icon: IconHeart, title: 'Expanding the Range', desc: 'Sacred essentials for daily worship: Dhoop, Sambrani Cups and traditional fragrances — alongside our dairy range.' },
 ];
 
 export default function Journey() {
@@ -88,7 +88,7 @@ export default function Journey() {
           <IconStar className="w-5 h-5 text-sacred-saffron" /> Most Important — No Fake Claims
         </div>
         <p className="text-stone-600 mt-3">We don&apos;t say “Since 1965” or “58 Years of Experience”. Our real story is our strength: a short time ago we started with a simple purpose — genuine products should reach every home. That honesty is what makes us relatable and trusted.</p>
-        <p className="text-stone-600 mt-2">Anmool is the parent brand. <b>DhenuVera</b> is our incense and traditional-fragrance brand under Anmool — a structure that lets us expand cleanly into dairy, traditional and ritual products.</p>
+        <p className="text-stone-600 mt-2">Anmool is one family — from dairy staples to traditional and ritual products, everything ships with the same honest promise.</p>
         <Link href="/about" className="inline-flex items-center gap-1.5 mt-4 text-sm font-bold text-sacred-maroon hover:underline">
           Read more about us <IconArrowRight className="w-4 h-4" />
         </Link>

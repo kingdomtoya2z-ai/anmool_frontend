@@ -174,8 +174,8 @@ export default function Contact() {
             <div className="relative">
               <div className="font-sacred text-lg text-[#FFF6E5]">Bulk or festive order?</div>
               <p className="text-xs text-white/65 mt-1 leading-relaxed">Weddings, temples, festivals or resale — tell us quantities on WhatsApp for the best rate.</p>
-              <Link href="/search?q=dhenuvera" className="inline-flex items-center gap-1.5 mt-4 text-xs font-bold bg-sacred-diya text-sacred-deepmaroon rounded-full px-5 py-2.5 hover:brightness-105 transition">
-                Browse DhenuVera <IconArrowRight className="w-3.5 h-3.5" />
+              <Link href="/search" className="inline-flex items-center gap-1.5 mt-4 text-xs font-bold bg-sacred-diya text-sacred-deepmaroon rounded-full px-5 py-2.5 hover:brightness-105 transition">
+                Browse Products <IconArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
           </div>

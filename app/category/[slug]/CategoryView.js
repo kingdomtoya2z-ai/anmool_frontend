@@ -79,7 +79,7 @@ export default function CategoryPage() {
             {children.map((c) => (
               <Link key={c._id} href={`/category/${c.slug}`} className="group spiritual-card rounded-2xl overflow-hidden hover:shadow-lg transition">
                 <div className="overflow-hidden">
-                  <SmartImage src={c.image} alt={c.name} className="w-full h-28 md:h-36 object-cover group-hover:scale-105 transition duration-500" />
+                  <SmartImage src={c.image} alt={c.name} className="w-full h-28 md:h-36 object-contain bg-white transition duration-500" />
                 </div>
                 <div className="p-3 text-center">
                   <div className="font-bold text-sm text-sacred-deepmaroon group-hover:text-sacred-maroon transition">{c.name}</div>

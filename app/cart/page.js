@@ -31,7 +31,7 @@ export default function CartPage() {
         <div className="space-y-4">
           {cart.map(item=> (
             <div key={item.product} className="bg-white rounded-2xl border border-gray-100 p-4 flex gap-4">
-              <SmartImage src={item.image} alt={item.name} className="w-20 h-20 rounded-xl object-cover border shrink-0" />
+              <SmartImage src={item.image} alt={item.name} className="w-20 h-20 rounded-xl object-contain border shrink-0" />
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-sm line-clamp-1">{item.name}</div>
                 <div className="text-xs text-gray-500">₹{item.price} each</div>

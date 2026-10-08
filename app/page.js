@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import HeroSlider from '@/components/HeroSlider';
-import DhenuVeraSection from '@/components/DhenuVeraSection';
 import ProductCarousel from '@/components/ProductCarousel';
 import CategoryCard from '@/components/CategoryCard';
 import Loader, { CardSkeleton } from '@/components/Loader';
@@ -10,7 +9,7 @@ import Link from 'next/link';
 import { IconFlame, IconTruck, IconLock, IconSupport, IconBox } from '@/components/icons';
 
 export default function Home() {
-  const [products, setProducts] = useState([]);
+  const [featured, setFeatured] = useState([]);
   const [categories, setCategories] = useState([]);
   const [catProducts, setCatProducts] = useState({});
   const [loading, setLoading] = useState(true);
@@ -19,7 +18,7 @@ export default function Home() {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      api.get('/products?limit=12').then(r => setProducts(r.data.products || r.data)).catch(() => { }),
+      api.get('/products?featured=true&limit=12').then(r => setFeatured(r.data.products || r.data || [])).catch(() => { }),
       api.get('/categories').then(r => setCategories(r.data || [])).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
@@ -47,7 +46,9 @@ export default function Home() {
   // Everything below is derived from REAL data — no hardcoded fallbacks.
   const mainCats = categories.filter(c => !c.parent);
   const subCats = categories.filter(c => c.parent);
-  const catsWithProducts = mainCats.filter(c => (catProducts[c.slug] || []).length > 0);
+  // Category-wise homepage picks (admin-chosen) win; otherwise auto latest.
+  const sectionProducts = (cat) => (cat.homepageProducts && cat.homepageProducts.length ? cat.homepageProducts : (catProducts[cat.slug] || []));
+  const catsWithProducts = mainCats.filter(c => sectionProducts(c).length > 0);
 
   const trustItems = [
     { Icon: IconFlame, title: 'Pavitra & Sacred Products', desc: 'Made for Pooja & Home' },
@@ -89,11 +90,11 @@ export default function Home() {
             <div className="sacred-divider max-w-xs mx-auto mb-4"><span className="text-sacred-saffron flex items-center justify-center"><IconFlame className="w-5 h-5 animate-flicker" /></span></div>
             <h2 className="font-sacred text-3xl md:text-4xl tracking-[0.12em] text-sacred-deepmaroon">SHOP BY CATEGORY</h2>
             <p className="font-vedic italic text-sacred-maroon/70 mt-1">apni shraddha ke anusaar chuniye</p>
-            {subCats.length > 0 && <p className="text-sm text-stone-500 mt-2">{mainCats.length} categories · {subCats.length} sub-categories · {products.length} products</p>}
+            {subCats.length > 0 && <p className="text-sm text-stone-500 mt-2">{mainCats.length} categories · {subCats.length} sub-categories</p>}
           </div>
           {loading ? (
-            <div className="grid md:grid-cols-3 gap-5">
-              {[1, 2, 3].map(i => <div key={i} className="bg-white rounded-3xl border animate-pulse h-[420px]" />)}
+            <div className="flex flex-wrap justify-center gap-4 md:gap-6">
+              {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="w-20 h-20 sm:w-28 sm:h-28 lg:w-36 lg:h-36 bg-white rounded-full border animate-pulse shrink-0" />)}
             </div>
           ) : mainCats.length === 0 ? (
             <div className="spiritual-card rounded-3xl p-12 text-center">
@@ -102,15 +103,26 @@ export default function Home() {
               <p className="text-sm text-stone-500 mt-2">The admin will add categories with images and they will appear here automatically.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-5">
+            <div className="flex flex-wrap justify-center gap-x-3 gap-y-5 sm:gap-x-4 md:gap-x-6">
               {mainCats.map(cat => <CategoryCard key={cat._id || cat.slug} category={cat} />)}
             </div>
           )}
         </div>
       </section>
 
-      {/* DhenuVera sacred brand — right after categories */}
-      <DhenuVeraSection />
+      {/* Handpicked for homepage — admin ticks "Featured" on products */}
+      {!loading && featured.length > 0 && (
+        <section className="max-w-[1400px] mx-auto px-4 py-10">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="font-sacred text-2xl md:text-3xl flex items-center gap-3 text-sacred-deepmaroon">
+              <span className="w-1 h-8 bg-gradient-to-b from-sacred-saffron to-sacred-maroon rounded-full"></span>
+              Handpicked For You
+            </h2>
+            <Link href="/search" className="text-sm font-semibold text-sacred-maroon hover:underline shrink-0">Shop All →</Link>
+          </div>
+          <ProductCarousel products={featured} />
+        </section>
+      )}
 
       {/* Products by top-level category — one section per category */}
       {loading || catsLoading ? (
@@ -135,7 +147,7 @@ export default function Home() {
               </h2>
               <Link href={`/category/${cat.slug}`} className="text-sm font-semibold text-sacred-maroon hover:underline shrink-0">View All →</Link>
             </div>
-            <ProductCarousel products={catProducts[cat.slug] || []} />
+            <ProductCarousel products={sectionProducts(cat)} />
           </section>
         ))
       )}

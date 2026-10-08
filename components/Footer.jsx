@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
-import { IconFlame, IconShield, IconTruck, IconPin, IconPhone, IconMail, IconCheck } from '@/components/icons';
+import { IconFlame, IconShield, IconTruck, IconPin, IconPhone, IconMail, IconCheck, IconFacebook, IconInstagram } from '@/components/icons';
 
 export default function Footer() {
   const [categories, setCategories] = useState([]);
@@ -38,11 +38,17 @@ export default function Footer() {
           </div>
           <p className="text-sm text-white/70 leading-relaxed">
             Bringing Pavitra Products to Your Family — With Purity, Care and Trust. From Karnal, Haryana:
-            Pure Desi Ghee, Cow Dung crafts and <b className="text-sacred-diya">DhenuVera</b> sacred incense.
+            Pure Desi Ghee, Milk and sacred essentials for daily worship.
           </p>
-          <Link href="/search?q=dhenuvera" className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-full bg-dhenu-saffron text-white text-xs font-bold hover:opacity-90 shadow">
-            <IconFlame className="w-4 h-4" /> Shop DhenuVera
-          </Link>
+          <div className="flex items-center gap-2.5 mt-4">
+            <a href="https://www.facebook.com/profile.php?id=61590312565401" target="_blank" rel="noopener noreferrer" aria-label="Anmool Dairy on Facebook" className="w-10 h-10 rounded-full bg-white/10 border border-white/15 flex items-center justify-center hover:bg-sacred-diya hover:text-sacred-deepmaroon hover:border-sacred-diya transition">
+              <IconFacebook className="w-5 h-5" />
+            </a>
+            <a href="https://www.instagram.com/anmooldairy07/" target="_blank" rel="noopener noreferrer" aria-label="Anmool Dairy on Instagram" className="w-10 h-10 rounded-full bg-white/10 border border-white/15 flex items-center justify-center hover:bg-sacred-diya hover:text-sacred-deepmaroon hover:border-sacred-diya transition">
+              <IconInstagram className="w-5 h-5" />
+            </a>
+            <span className="text-xs text-white/50 ml-1">Follow our journey</span>
+          </div>
           <div className="mt-4 space-y-2 text-sm text-white/80">
             <div className="flex items-start gap-2"><IconPin className="w-4 h-4 mt-0.5 shrink-0 text-sacred-diya" /> Village Budhanpur, Karnal, Haryana - 132001</div>
             <div className="flex items-center gap-2"><IconPhone className="w-4 h-4 shrink-0 text-sacred-diya" /> 90342-39674 | 70784-20222</div>
@@ -86,23 +92,22 @@ export default function Footer() {
         <div>
           <h4 className="font-sacred text-lg mb-4 text-sacred-diya">Why Anmool?</h4>
           <ul className="space-y-3 text-sm text-white/75">
-            <li className="flex gap-2"><IconFlame className="w-4 h-4 mt-0.5 shrink-0 text-sacred-diya" /> Temple-grade dhoop, honestly crafted</li>
+            <li className="flex gap-2"><IconFlame className="w-4 h-4 mt-0.5 shrink-0 text-sacred-diya" /> Sacred essentials, honestly crafted</li>
             <li className="flex gap-2"><IconCheck className="w-4 h-4 mt-0.5 shrink-0 text-sacred-diya" /> Trusted sourcing and hygienic packing</li>
             <li className="flex gap-2"><IconShield className="w-4 h-4 mt-0.5 shrink-0 text-sacred-diya" /> Secure ordering for registered customers</li>
             <li className="flex gap-2"><IconPhone className="w-4 h-4 mt-0.5 shrink-0 text-sacred-diya" /> Responsive 24×7 customer support</li>
           </ul>
-          <div className="mt-6 bg-white/10 rounded-2xl p-4 border border-sacred-diya/30">
-            <div className="text-xs font-bold text-sacred-diya tracking-wide">FREE SHIPPING</div>
-            <div className="text-sm mt-1">On orders above ₹300. ₹100 shipping otherwise.</div>
-          </div>
         </div>
       </div>
 
       <div className="border-t border-white/10 relative">
         <div className="max-w-[1400px] mx-auto px-4 py-6 flex flex-col md:flex-row justify-between gap-4 items-center text-xs text-white/50">
-          <div>© {new Date().getFullYear()} Anmool and DhenuVera. All rights reserved. Crafted with care in Karnal, Haryana.</div>
-          <div className="flex gap-4">
-            <span>Privacy Policy</span><span>Terms</span><span>Shipping Policy</span><span>Refund</span>
+          <div>© {new Date().getFullYear()} Anmool Dairy. All rights reserved. Crafted with care in Karnal, Haryana.</div>
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+            <Link href="/privacy-policy" className="hover:text-sacred-diya transition">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-sacred-diya transition">Terms</Link>
+            <Link href="/shipping-policy" className="hover:text-sacred-diya transition">Shipping Policy</Link>
+            <Link href="/refund-policy" className="hover:text-sacred-diya transition">Refund</Link>
           </div>
         </div>
       </div>

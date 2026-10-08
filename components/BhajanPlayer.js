@@ -1,109 +1,71 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
+import { ensureAudio, playBhajan, stopBhajan, getBhajanState, isBhajanStopped } from '@/lib/bhajan';
 
-// Devotional background audio — starts on the first site open per session,
-// like temple websites. Browsers block audible autoplay, so we attempt it and
-// fall back to a tap-to-enable pill. Once enabled it keeps playing across pages.
-const SRC = process.env.NEXT_PUBLIC_BHAJAN_URL || '/audio/bhajan.mp3';
-const SESSION_KEY = 'anmool_bhajan_autostarted';
-const MUTE_KEY = 'anmool_bhajan_muted';
+// Autoplay policy: homepage first entry per session plays once.
+// Stops on (a) navigating away, or (b) the first tap anywhere else.
+// Manual replay via the header button is always allowed.
+const SESSION_KEY = 'anmool_bhajan_session_done';
+
+function sessionDone() {
+  try { return !!sessionStorage.getItem(SESSION_KEY); } catch { return true; }
+}
+function markSessionDone() {
+  try { sessionStorage.setItem(SESSION_KEY, '1'); } catch {}
+}
 
 export default function BhajanPlayer() {
-  const audioRef = useRef(null);
-  const [available, setAvailable] = useState(false);
-  const [playing, setPlaying] = useState(false);
-  const [needsTap, setNeedsTap] = useState(false);
-  const [muted, setMuted] = useState(false);
+  const pathname = usePathname();
+  const enteredOn = useRef(null);
+  // True while we still owe the visitor the session's autostart (browser
+  // blocked the silent attempt) — the next tap anywhere starts it, since
+  // that tap counts as the user gesture browsers require.
+  const pendingUnlock = useRef(false);
 
-  // Only render at all when an audio file actually exists
+  // Mount: audio element ready, probe handled by lib
   useEffect(() => {
-    let live = true;
-    fetch(SRC, { method: 'HEAD' })
-      .then((r) => { if (live && r.ok) setAvailable(true); })
-      .catch(() => {});
-    return () => { live = false; };
+    ensureAudio();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // First open per session → try autoplay
+  // Homepage entry (first load or later navigation) → autoplay once per session
   useEffect(() => {
-    if (!available) return;
-    try {
-      if (sessionStorage.getItem(SESSION_KEY)) return;
-      sessionStorage.setItem(SESSION_KEY, '1');
-    } catch { return; }
-    const a = audioRef.current;
-    if (!a) return;
-    a.volume = 0.4;
-    let m = false;
-    try { m = localStorage.getItem(MUTE_KEY) === '1'; } catch {}
-    a.muted = m;
-    setMuted(m);
-    a.play()
-      .then(() => { setPlaying(true); setNeedsTap(false); })
-      .catch(() => { setPlaying(false); setNeedsTap(true); });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [available]);
-
-  const enable = async () => {
-    const a = audioRef.current;
-    if (!a) return;
-    try {
-      a.muted = false;
-      setMuted(false);
-      try { localStorage.setItem(MUTE_KEY, '0'); } catch {}
-      await a.play();
-      setPlaying(true);
-      setNeedsTap(false);
-    } catch {
-      setNeedsTap(true);
+    if (pathname !== '/') {
+      if (getBhajanState().playing) stopBhajan();
+      enteredOn.current = null;
+      return;
     }
-  };
+    if (sessionDone()) return;
+    if (isBhajanStopped()) { markSessionDone(); return; }
+    enteredOn.current = '/';
+    markSessionDone();
+    playBhajan().then((ok) => {
+      if (!ok) pendingUnlock.current = true;
+    });
+  }, [pathname]);
 
-  const toggleMute = () => {
-    const a = audioRef.current;
-    if (!a) return;
-    const m = !muted;
-    a.muted = m;
-    setMuted(m);
-    try { localStorage.setItem(MUTE_KEY, m ? '1' : '0'); } catch {}
-    if (!m && a.paused) {
-      a.play().then(() => { setPlaying(true); setNeedsTap(false); }).catch(() => setNeedsTap(true));
-    }
-  };
+  // Tap anywhere (except the replay button itself):
+  //  - if autostart is still owed → this tap unlocks & starts the music
+  //  - else if music is playing → stop it
+  useEffect(() => {
+    const onDown = (e) => {
+      try {
+        if (e.target && e.target.closest && e.target.closest('[data-bhajan-ui]')) return;
+      } catch {}
+      if (pendingUnlock.current) {
+        pendingUnlock.current = false;
+        playBhajan();
+        return;
+      }      if (getBhajanState().playing) {
+        stopBhajan();
+        markSessionDone();
+      }
+    };
+    document.addEventListener('pointerdown', onDown, true);
+    return () => document.removeEventListener('pointerdown', onDown, true);
+  }, []);
 
-  if (!available) return null;
-
-  return (
-    <>
-      <audio ref={audioRef} src={SRC} loop preload="auto" aria-hidden="true" />
-      {needsTap || !playing ? (
-        <button
-          onClick={enable}
-          className="fixed bottom-5 right-5 z-[60] flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-gradient-to-br from-sacred-maroon to-sacred-deepmaroon text-sacred-diya text-xs font-bold shadow-[0_10px_30px_-8px_rgba(20,40,8,0.7)] border border-sacred-diya/50 animate-pulse hover:animate-none hover:scale-105 transition"
-          aria-label="Play devotional music"
-        >
-          <span className="w-7 h-7 rounded-full bg-sacred-diya/20 border border-sacred-diya/60 flex items-center justify-center font-vedic text-base leading-none">ॐ</span>
-          Mangal Dhun bajayein
-        </button>
-      ) : (
-        <button
-          onClick={toggleMute}
-          title={muted ? 'Unmute devotional music' : 'Mute devotional music'}
-          aria-label={muted ? 'Unmute devotional music' : 'Mute devotional music'}
-          className="fixed bottom-5 right-5 z-[60] w-11 h-11 rounded-full bg-gradient-to-br from-sacred-maroon to-sacred-deepmaroon text-sacred-diya shadow-[0_10px_30px_-8px_rgba(20,40,8,0.7)] border border-sacred-diya/50 flex items-center justify-center hover:scale-105 transition"
-        >
-          {muted ? (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-          ) : (
-            <span className="flex items-center gap-0.5">
-              <span className="w-1 rounded-full bg-sacred-diya animate-pulse" style={{ height: 12 }} />
-              <span className="w-1 rounded-full bg-sacred-diya animate-pulse" style={{ height: 16, animationDelay: '-0.3s' }} />
-              <span className="w-1 rounded-full bg-sacred-diya animate-pulse" style={{ height: 9, animationDelay: '-0.6s' }} />
-            </span>
-          )}
-        </button>
-      )}
-    </>
-  );
+  return null;
 }

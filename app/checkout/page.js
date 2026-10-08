@@ -240,7 +240,7 @@ export default function Checkout() {
         <div className="space-y-3 mt-4 max-h-[300px] overflow-auto pr-1">
           {cart.map(item=> (
             <div key={item.product} className="flex gap-3 text-sm">
-              <img src={item.image} alt={item.name} className="w-12 h-12 rounded-lg object-cover border" />
+              <img src={item.image} alt={item.name} className="w-12 h-12 rounded-lg object-contain border" />
               <div className="flex-1 min-w-0"><div className="font-medium line-clamp-1">{item.name}</div><div className="text-xs text-gray-500">Qty: {item.quantity} × ₹{item.price}</div></div>
               <div className="font-bold">₹{item.price*item.quantity}</div>
             </div>

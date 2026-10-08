@@ -174,7 +174,6 @@ export default function AdminPage() {
   const NAV = [
     { id: 'overview', label: 'Overview', icon: IconChart, desc: 'Sales, funnel & alerts' },
     { id: 'orders', label: 'Orders', icon: IconBox, desc: 'Track & update status' },
-    { id: 'dhenuvera', label: 'DhenuVera', icon: IconFlame, desc: 'Subcats & products' },
     { id: 'banners', label: 'Banners', icon: IconImage, desc: 'Homepage hero slider' },
     { id: 'categories', label: 'Categories', icon: IconGrid, desc: 'Homepage & menu' },
     { id: 'products', label: 'Products', icon: IconFlame, desc: 'Catalogue & stock' },
@@ -261,9 +260,8 @@ export default function AdminPage() {
 
           {!loading && tab === 'overview' && <Overview stats={stats} orders={orders} products={products} setTab={setTab} />}
           {!loading && tab === 'orders' && <OrdersTab orders={orders} reload={reloadOrders} />}
-          {!loading && tab === 'dhenuvera' && <DhenuVeraTab categories={categories} products={products} onChanged={loadAll} />}
           {!loading && tab === 'banners' && <BannersTab banners={banners} onChanged={reloadBanners} />}
-          {!loading && tab === 'categories' && <CategoriesTab categories={categories} onChanged={loadAll} />}
+          {!loading && tab === 'categories' && <CategoriesTab categories={categories} products={products} onChanged={loadAll} />}
           {!loading && tab === 'products' && <ProductsTab categories={categories} products={products} onChanged={loadAll} />}
           {!loading && tab === 'users' && <UsersTab users={users} />}
         </div>
@@ -370,7 +368,7 @@ function Overview({ stats, orders, products, setTab }) {
           <div className="space-y-2">
             {lowStock.map(p => (
               <button key={p._id} onClick={() => setTab('products')} className="w-full flex flex-wrap items-center gap-3 border border-stone-100 rounded-xl p-2.5 hover:border-sacred-saffron transition text-left">
-                <SmartImage src={p.images?.[0]} alt={p.name} className="w-10 h-10 rounded-lg object-cover border shrink-0" />
+                <SmartImage src={p.images?.[0]} alt={p.name} className="w-10 h-10 rounded-lg object-contain border shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-bold truncate">{p.name}</div>
                   <div className="text-[11px] text-red-600 font-semibold">{p.stock} left · ₹{p.price}</div>
@@ -757,7 +755,7 @@ function OrdersTab({ orders, reload }) {
                       <div className="divide-y divide-gray-100 border rounded-xl bg-white overflow-hidden">
                         {o.items.map((it, idx) => (
                           <div key={idx} className="flex items-center gap-3 p-3 text-sm">
-                            <SmartImage src={it.image} alt={it.name} className="w-10 h-10 rounded-lg object-cover border shrink-0" />
+                            <SmartImage src={it.image} alt={it.name} className="w-10 h-10 rounded-lg object-contain border shrink-0" />
                             <div className="flex-1 min-w-0">
                               <div className="font-medium truncate">{it.name}</div>
                               <div className="text-xs text-gray-500">Qty {it.quantity} × {fmtRs(it.price)}</div>
@@ -827,7 +825,7 @@ function OrdersTab({ orders, reload }) {
 /*  Categories tab                                                     */
 /* ------------------------------------------------------------------ */
 
-function CategoriesTab({ categories, onChanged }) {
+function CategoriesTab({ categories, products, onChanged }) {
   const [form, setForm] = useState({ name: '', description: '', parent: '', image: '' });
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState('');
@@ -846,6 +844,30 @@ function CategoriesTab({ categories, onChanged }) {
   };
 
   const resetForm = () => { setForm({ name: '', description: '', parent: '', image: '' }); setFile(null); setPreview(''); setEditingId(null); };
+
+  // Homepage picks (category-wise): ordered product ids shown in this
+  // category's homepage section. Empty = auto-fill latest.
+  const [picksOpen, setPicksOpen] = useState(null);
+  const [picksSel, setPicksSel] = useState([]);
+  const [picksBusy, setPicksBusy] = useState(false);
+  const openPicks = (cat) => {
+    setPicksOpen(catIdStr(cat._id));
+    setPicksSel(((cat.homepageProducts || []).map((p) => String(p._id || p))));
+  };
+  const togglePick = (id) => setPicksSel((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : (prev.length >= 8 ? prev : [...prev, id])));
+  const subtreeProducts = (cat) => {
+    const ids = [catIdStr(cat._id), ...descendantIds(categories, cat._id)];
+    return (products || []).filter((p) => ids.includes(String(p.category?._id || p.category || '')));
+  };
+  const savePicks = async (cat) => {
+    setPicksBusy(true);
+    try {
+      await api.put(`/categories/${cat._id}/homepage-products`, { productIds: picksSel });
+      toast.success(`Homepage picks saved for "${cat.name}"`);
+      onChanged();
+    } catch (e) { toast.error(e.response?.data?.message || 'Failed to save picks'); }
+    finally { setPicksBusy(false); }
+  };
 
   const startEdit = (cat) => {
     setEditingId(cat._id);
@@ -927,8 +949,8 @@ function CategoriesTab({ categories, onChanged }) {
               <div className="text-xs font-bold mb-2 flex items-center gap-1.5"><IconCloud className="w-4 h-4" /> Category Image * (required — homepage)</div>
               <input type="file" accept="image/*" onChange={handleFile} className="w-full text-xs" />
               <div className="flex items-center gap-3 mt-2">
-                {preview && <img src={preview} alt="preview" className="w-16 h-16 rounded-lg object-cover border" />}
-                {!preview && <SmartImage src={form.image} className="w-16 h-16 rounded-lg object-cover border" />}
+                {preview && <img src={preview} alt="preview" className="w-16 h-16 rounded-lg object-contain border" />}
+                {!preview && <SmartImage src={form.image} className="w-16 h-16 rounded-lg object-contain border" />}
               </div>
               <div className="text-[11px] text-gray-500 mt-2">Or paste image URL</div>
               <input value={form.image} onChange={e => setForm({ ...form, image: e.target.value })} placeholder="https://res.cloudinary.com/…" className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-xs" />
@@ -953,8 +975,9 @@ function CategoriesTab({ categories, onChanged }) {
               const leaf = isLeafCat(categories, c._id);
               const kidCount = childrenOf(categories, c._id).length;
               return (
+                <>
                 <div key={c._id} className="flex flex-wrap items-center gap-3 border border-gray-100 rounded-xl p-3 hover:border-primary/20 transition" style={depth ? { marginLeft: `${Math.min(depth, 5) * 18}px` } : undefined}>
-                  <SmartImage src={c.image} alt={c.name} className="w-12 h-12 rounded-xl object-cover border shrink-0" />
+                  <SmartImage src={c.image} alt={c.name} className="w-12 h-12 rounded-xl object-contain border shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-sm flex flex-wrap items-center gap-2 min-w-0">
                       {depth > 0 && <span className="text-stone-300 font-normal">└</span>}
@@ -968,335 +991,40 @@ function CategoriesTab({ categories, onChanged }) {
                   </div>
                   <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
                     <button onClick={() => startSub(c)} title="Add a sub-category under this one" className="flex-1 sm:flex-none text-xs font-bold px-3 py-1.5 rounded-full border border-sacred-saffron/50 text-sacred-maroon hover:bg-sacred-sandal transition">+ Sub</button>
+                    <button onClick={() => (picksOpen === catIdStr(c._id) ? setPicksOpen(null) : openPicks(c))} title="Choose which products show in this category's homepage section" className={`flex-1 sm:flex-none text-xs font-bold px-3 py-1.5 rounded-full border transition ${(c.homepageProducts || []).length ? 'border-sacred-saffron bg-sacred-sandal text-sacred-maroon' : 'border-gray-200 text-gray-600 hover:border-sacred-saffron hover:text-sacred-maroon'}`}>★ Homepage{(c.homepageProducts || []).length ? ` (${c.homepageProducts.length})` : ''}</button>
                     <button onClick={() => startEdit(c)} className="flex-1 sm:flex-none text-xs font-bold px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-primary hover:text-primary">Edit</button>
                     <button onClick={() => remove(c)} disabled={busyId === c._id} className="flex-1 sm:flex-none text-xs font-bold px-3 py-1.5 rounded-full border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50">Delete</button>
                   </div>
                 </div>
+                {picksOpen === catIdStr(c._id) && (
+                  <div className="border border-sacred-saffron/40 bg-cream/50 rounded-xl p-3 -mt-1" style={depth ? { marginLeft: `${Math.min(depth, 5) * 18}px` } : undefined}>
+                    <div className="text-xs font-bold text-sacred-deepmaroon">Homepage picks for “{c.name}” — {picksSel.length}/8 · tap to add/remove, saved in tap order</div>
+                    <div className="text-[11px] text-gray-500 mb-2">Empty = homepage auto-fills latest products.</div>
+                    <div className="flex flex-wrap gap-1.5 max-h-44 overflow-auto pr-1">
+                      {subtreeProducts(c).map((p) => {
+                        const id = String(p._id);
+                        const on = picksSel.includes(id);
+                        return (
+                          <button key={id} onClick={() => togglePick(id)} className={`text-[11px] font-bold px-3 py-1.5 rounded-full border transition ${on ? 'bg-primary text-white border-primary' : 'bg-white border-gray-200 text-gray-600 hover:border-primary'}`}>
+                            {on ? `${picksSel.indexOf(id) + 1} · ` : ''}{p.name}
+                          </button>
+                        );
+                      })}
+                      {subtreeProducts(c).length === 0 && <span className="text-xs text-gray-400">No products under this category yet — add products to its final sub-categories first.</span>}
+                    </div>
+                    <div className="flex gap-2 mt-2.5">
+                      <button onClick={() => savePicks(c)} disabled={picksBusy} className="text-xs font-bold bg-primary text-white rounded-full px-5 py-2 disabled:opacity-50">{picksBusy ? 'Saving…' : 'Save picks'}</button>
+                      <button onClick={() => setPicksSel([])} className="text-xs font-bold border border-gray-200 rounded-full px-5 py-2 text-gray-600 hover:bg-gray-50">Clear</button>
+                    </div>
+                  </div>
+                )}
+                </>
               );
             })}
             {categories.length === 0 && <div className="text-sm text-gray-400 py-8 text-center">No categories yet. Add your first one — it will appear on the homepage & navbar right away.</div>}
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  DhenuVera tab — dedicated sub-category + product uploads         */
-/* ------------------------------------------------------------------ */
-
-function DhenuVeraTab({ categories, products, onChanged }) {
-  const parent = categories.find((c) => !c.parent && /dhenu|puja|ritual/i.test(`${c.name || ''} ${c.slug || ''}`));
-  const subs = parent
-    ? categories.filter((c) => String(c.parent?._id || c.parent || '') === String(parent._id))
-    : [];
-  const scopeIds = parent ? [catIdStr(parent._id), ...descendantIds(categories, parent._id)] : [];
-  const scopeLeaves = parent
-    ? categories.filter((c) => scopeIds.includes(catIdStr(c._id)) && isLeafCat(categories, c._id))
-    : [];
-  const dhenuProducts = products.filter((p) => scopeIds.includes(String(p.category?._id || p.category || '')));
-
-  // Parent-category form (only when no DhenuVera parent exists yet)
-  const [pName, setPName] = useState('DhenuVera');
-  const [pDesc, setPDesc] = useState('Sacred cow-dung incense — Sambrani Cups, Cone Dhoop & Dhoop Sticks.');
-  const [pImage, setPImage] = useState('');
-  const [pFile, setPFile] = useState(null);
-  const [pBusy, setPBusy] = useState(false);
-
-  const createParent = async (e) => {
-    e.preventDefault();
-    setPBusy(true);
-    try {
-      const fd = new FormData();
-      fd.append('name', pName);
-      fd.append('description', pDesc);
-      if (pImage) fd.append('image', pImage);
-      if (pFile) fd.append('imageFile', pFile);
-      await api.post('/categories', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      toast.success('DhenuVera parent category created');
-      onChanged();
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to create category'); }
-    finally { setPBusy(false); }
-  };
-
-  // Sub-category form
-  const [subForm, setSubForm] = useState({ name: '', description: '', image: '' });
-  const [subFile, setSubFile] = useState(null);
-  const [subPreview, setSubPreview] = useState('');
-  const [subEditingId, setSubEditingId] = useState(null);
-  const [subBusy, setSubBusy] = useState(false);
-
-  const resetSub = () => { setSubForm({ name: '', description: '', image: '' }); setSubFile(null); setSubPreview(''); setSubEditingId(null); };
-  const startSubEdit = (c) => {
-    setSubEditingId(c._id);
-    setSubForm({ name: c.name, description: c.description || '', image: c.image || '' });
-    setSubFile(null); setSubPreview('');
-  };
-  const saveSub = async (e) => {
-    e.preventDefault();
-    setSubBusy(true);
-    try {
-      const fd = new FormData();
-      fd.append('name', subForm.name);
-      fd.append('description', subForm.description);
-      if (!subEditingId) fd.append('parent', parent._id);
-      if (subForm.image) fd.append('image', subForm.image);
-      if (subFile) fd.append('imageFile', subFile);
-      if (subEditingId) {
-        await api.put(`/categories/${subEditingId}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-        toast.success('Sub-category updated');
-      } else {
-        await api.post('/categories', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-        toast.success('DhenuVera sub-category created');
-      }
-      resetSub();
-      onChanged();
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to save sub-category'); }
-    finally { setSubBusy(false); }
-  };
-  const removeSub = async (c) => {
-    const n = dhenuProducts.filter((p) => String(p.category?._id || p.category || '') === String(c._id)).length;
-    if (!window.confirm(n ? `"${c.name}" has ${n} product(s). Delete it? (Products stay but lose their category link.)` : `Delete sub-category "${c.name}"?`)) return;
-    try { await api.delete(`/categories/${c._id}`); toast.success('Sub-category deleted'); onChanged(); }
-    catch (err) { toast.error(err.response?.data?.message || 'Delete failed'); }
-  };
-
-  // Product form (scoped to DhenuVera categories)
-  const emptyProduct = { name: '', category: '', price: '', comparePrice: '', stock: '100', unit: 'pack', weight: '', shortDescription: '', description: '', tags: '', images: '', isFeatured: true };
-  const [prodForm, setProdForm] = useState(emptyProduct);
-  const [prodFiles, setProdFiles] = useState([]);
-  const [prodPreviews, setProdPreviews] = useState([]);
-  const [prodEditingId, setProdEditingId] = useState(null);
-  const [prodBusy, setProdBusy] = useState(false);
-
-  const resetProd = () => { setProdForm({ ...emptyProduct, category: scopeLeaves[0]?._id || '' }); setProdFiles([]); setProdPreviews([]); setProdEditingId(null); };
-  const startProdEdit = (p) => {
-    setProdEditingId(p._id);
-    setProdForm({
-      name: p.name, category: p.category?._id || p.category || '', price: p.price,
-      comparePrice: p.comparePrice || '', stock: p.stock, unit: p.unit || 'pack', weight: p.weight || '',
-      shortDescription: p.shortDescription || '', description: p.description || '',
-      tags: (p.tags || []).join(', '), images: (p.images || []).join(', '), isFeatured: !!p.isFeatured,
-    });
-    setProdFiles([]); setProdPreviews([]);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-  const saveProd = async (e) => {
-    e.preventDefault();
-    if (!prodForm.category) { toast.error('Pick a DhenuVera sub-category'); return; }
-    setProdBusy(true);
-    try {
-      const fd = new FormData();
-      fd.append('name', prodForm.name);
-      fd.append('description', prodForm.description);
-      fd.append('shortDescription', prodForm.shortDescription);
-      fd.append('price', prodForm.price);
-      if (prodForm.comparePrice) fd.append('comparePrice', prodForm.comparePrice);
-      fd.append('category', prodForm.category);
-      fd.append('stock', prodForm.stock);
-      fd.append('unit', prodForm.unit);
-      fd.append('weight', prodForm.weight);
-      fd.append('isFeatured', prodForm.isFeatured);
-      fd.append('tags', prodForm.tags);
-      if (prodForm.images) fd.append('images', prodForm.images.split(',').map((s) => s.trim()).filter(Boolean).join(','));
-      prodFiles.forEach((f) => fd.append('imageFiles', f));
-      if (prodEditingId) {
-        await api.put(`/products/${prodEditingId}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-        toast.success('DhenuVera product updated');
-      } else {
-        await api.post('/products', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-        toast.success('DhenuVera product created');
-      }
-      resetProd();
-      onChanged();
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to save product'); }
-    finally { setProdBusy(false); }
-  };
-  const removeProd = async (p) => {
-    if (!window.confirm(`Delete product "${p.name}"?`)) return;
-    try { await api.delete(`/products/${p._id}`); toast.success('Product deleted'); onChanged(); }
-    catch (err) { toast.error(err.response?.data?.message || 'Delete failed'); }
-  };
-
-  const catOptions = scopeLeaves;
-
-  return (
-    <div className="mt-6">
-      {/* Header strip */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-sacred-deepmaroon via-sacred-maroon to-[#142808] text-white p-5 md:p-6">
-        <div className="om-watermark absolute -right-4 -top-8 text-[120px] hidden sm:block" style={{ WebkitTextStroke: '1px rgba(245,165,36,0.25)', color: 'transparent' }}>ॐ</div>
-        <div className="relative flex flex-wrap items-center gap-3">
-          <span className="w-11 h-11 rounded-2xl bg-white/10 border border-sacred-diya/40 flex items-center justify-center shrink-0">
-            <IconFlame className="w-6 h-6 text-sacred-diya" />
-          </span>
-          <div className="flex-1 min-w-[200px]">
-            <div className="text-[10px] font-bold tracking-[0.24em] text-sacred-diya">DHENUVERA STUDIO</div>
-            <div className="font-sacred text-xl text-[#FFF6E5]">DhenuVera Uploads</div>
-            <div className="text-[11px] text-white/60 mt-0.5">{subs.length} sub-categor{subs.length === 1 ? 'y' : 'ies'} · {dhenuProducts.length} product{dhenuProducts.length === 1 ? '' : 's'} — live in the homepage DhenuVera section</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Step 1 — parent category (only when missing) */}
-      {!parent && (
-        <div className="mt-4 bg-white rounded-2xl border border-amber-200 p-6 shadow-sm">
-          <h3 className="font-bold text-lg">Step 1 — Create the DhenuVera parent category</h3>
-          <p className="text-xs text-gray-500 mt-1">Sub-categories (Sambrani Cup, Cone Dhoop, Stick Dhoop) will live under it, and the homepage section picks them up automatically.</p>
-          <form onSubmit={createParent} className="grid md:grid-cols-2 gap-3 mt-4">
-            <Field label="Name *">
-              <input required value={pName} onChange={(e) => setPName(e.target.value)} className={inputCls} />
-            </Field>
-            <Field label="Image * (upload or URL)">
-              <div className="flex gap-2">
-                <input value={pImage} onChange={(e) => setPImage(e.target.value)} placeholder="https://res.cloudinary.com/…" className={inputCls} />
-                <label className="shrink-0 cursor-pointer text-xs font-bold border border-gray-200 rounded-xl px-4 flex items-center gap-1.5 hover:border-primary hover:text-primary">
-                  <IconCloud className="w-4 h-4" /> Upload
-                  <input type="file" accept="image/*" onChange={(e) => setPFile(e.target.files[0] || null)} className="hidden" />
-                </label>
-              </div>
-              {pFile && <div className="text-[11px] text-green-700 mt-1">Selected: {pFile.name}</div>}
-            </Field>
-            <div className="md:col-span-2">
-              <Field label="Description">
-                <input value={pDesc} onChange={(e) => setPDesc(e.target.value)} className={inputCls} />
-              </Field>
-            </div>
-            <div className="md:col-span-2">
-              <button disabled={pBusy} className="bg-primary text-white rounded-full px-8 py-3 font-bold text-sm disabled:opacity-50">
-                {pBusy ? 'Creating…' : 'Create DhenuVera Category'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {parent && (
-        <div className="mt-4 grid lg:grid-cols-2 gap-4 md:gap-6 items-start">
-          {/* Sub-category upload */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-            <h3 className="font-bold text-lg">{subEditingId ? 'Edit Sub-category' : 'Add DhenuVera Sub-category'}</h3>
-            <p className="text-xs text-gray-500 mb-4">Under <b>{parent.name}</b> — e.g. Sambrani Cup, Cone Dhoop, Stick Dhoop. Image is required.</p>
-            <form onSubmit={saveSub} className="space-y-3">
-              <Field label="Name *">
-                <input required value={subForm.name} onChange={(e) => setSubForm({ ...subForm, name: e.target.value })} placeholder="e.g. Sambrani Cup" className={inputCls} />
-              </Field>
-              <Field label="Description">
-                <textarea value={subForm.description} onChange={(e) => setSubForm({ ...subForm, description: e.target.value })} rows={2} placeholder="Short description" className={inputCls} />
-              </Field>
-              <div className="border-2 border-dashed border-accent/20 rounded-xl p-4 bg-cream/50">
-                <div className="text-xs font-bold mb-2 flex items-center gap-1.5"><IconCloud className="w-4 h-4" /> Sub-category Image *</div>
-                <input type="file" accept="image/*" onChange={(e) => { const f = e.target.files[0]; setSubFile(f || null); setSubPreview(f ? URL.createObjectURL(f) : ''); }} className="w-full text-xs" />
-                {(subPreview || subForm.image) && <img src={subPreview || subForm.image} alt="preview" className="w-full h-28 rounded-lg object-cover border mt-2" />}
-                <div className="text-[11px] text-gray-500 mt-2">Or paste image URL</div>
-                <input value={subForm.image} onChange={(e) => setSubForm({ ...subForm, image: e.target.value })} placeholder="https://res.cloudinary.com/…" className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-xs" />
-              </div>
-              <div className="flex gap-2">
-                <button disabled={subBusy} className="flex-1 bg-primary text-white rounded-full py-3 font-bold text-sm disabled:opacity-50">
-                  {subBusy ? 'Saving…' : subEditingId ? 'Update Sub-category' : 'Create Sub-category'}
-                </button>
-                {subEditingId && <button type="button" onClick={resetSub} className="px-4 rounded-full border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50">Cancel</button>}
-              </div>
-            </form>
-
-            <div className="mt-5 space-y-2">
-              {subs.map((c) => {
-                const n = dhenuProducts.filter((p) => String(p.category?._id || p.category || '') === String(c._id)).length;
-                return (
-                  <div key={c._id} className="flex flex-wrap items-center gap-3 border border-gray-100 rounded-xl p-2.5 hover:border-primary/20 transition">
-                    <SmartImage src={c.image} alt={c.name} className="w-11 h-11 rounded-xl object-cover border shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm truncate">{c.name}</div>
-                      <div className="text-[11px] text-gray-500">/{c.slug} · {n} product{n === 1 ? '' : 's'}</div>
-                    </div>
-                    <button onClick={() => startSubEdit(c)} className="text-xs font-bold px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-primary hover:text-primary">Edit</button>
-                    <button onClick={() => removeSub(c)} className="text-xs font-bold px-3 py-1.5 rounded-full border border-red-200 text-red-600 hover:bg-red-50">Delete</button>
-                  </div>
-                );
-              })}
-              {subs.length === 0 && <div className="text-xs text-gray-400 py-4 text-center">No sub-categories yet — add Sambrani Cup, Cone Dhoop, Stick Dhoop above.</div>}
-            </div>
-          </div>
-
-          {/* Product upload */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-            <h3 className="font-bold text-lg">{prodEditingId ? 'Edit DhenuVera Product' : 'Add DhenuVera Product'}</h3>
-            <p className="text-xs text-gray-500 mb-4">Products here are scoped to DhenuVera categories and appear in the homepage section + shop.</p>
-            <form onSubmit={saveProd} className="space-y-3">
-              <Field label="Product Name *">
-                <input required value={prodForm.name} onChange={(e) => setProdForm({ ...prodForm, name: e.target.value })} placeholder="e.g. Sambrani Cup Guggal — Pack of 12" className={inputCls} />
-              </Field>
-              <Field label="Final Sub-category * (last level only)">
-                <select required value={prodForm.category} onChange={(e) => setProdForm({ ...prodForm, category: e.target.value })} className={inputCls}>
-                  <option value="">Select final sub-category…</option>
-                  {catOptions.map((c) => <option key={c._id} value={c._id}>{pathLabel(categories, c._id)}</option>)}
-                </select>
-              </Field>
-              <div className="grid grid-cols-3 gap-3">
-                <Field label="Price ₹ *">
-                  <input required type="number" min="0" value={prodForm.price} onChange={(e) => setProdForm({ ...prodForm, price: e.target.value })} placeholder="199" className={inputCls} />
-                </Field>
-                <Field label="Compare ₹">
-                  <input type="number" min="0" value={prodForm.comparePrice} onChange={(e) => setProdForm({ ...prodForm, comparePrice: e.target.value })} placeholder="249" className={inputCls} />
-                </Field>
-                <Field label="Stock *">
-                  <input type="number" min="0" value={prodForm.stock} onChange={(e) => setProdForm({ ...prodForm, stock: e.target.value })} className={inputCls} />
-                </Field>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Weight">
-                  <input value={prodForm.weight} onChange={(e) => setProdForm({ ...prodForm, weight: e.target.value })} placeholder="12 cups" className={inputCls} />
-                </Field>
-                <Field label="Unit">
-                  <input value={prodForm.unit} onChange={(e) => setProdForm({ ...prodForm, unit: e.target.value })} placeholder="pack" className={inputCls} />
-                </Field>
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={prodForm.isFeatured} onChange={(e) => setProdForm({ ...prodForm, isFeatured: e.target.checked })} className="accent-primary w-4 h-4" />
-                <span className="font-semibold text-gray-700">Feature in homepage bestsellers</span>
-              </label>
-              <Field label="Full description *">
-                <textarea required rows={2} value={prodForm.description} onChange={(e) => setProdForm({ ...prodForm, description: e.target.value })} placeholder="Fragrance, burn time, how to use…" className={inputCls} />
-              </Field>
-              <Field label="Tags (comma separated)">
-                <input value={prodForm.tags} onChange={(e) => setProdForm({ ...prodForm, tags: e.target.value })} placeholder="dhenuvera, sambrani, guggal" className={inputCls} />
-              </Field>
-              <div className="border-2 border-dashed border-accent/20 rounded-xl p-4 bg-cream/50">
-                <div className="text-xs font-bold mb-2 flex items-center gap-1.5"><IconCloud className="w-4 h-4" /> Product Images (up to 5)</div>
-                <input type="file" multiple accept="image/*" onChange={(e) => { const arr = Array.from(e.target.files).slice(0, 5); setProdFiles(arr); setProdPreviews(arr.map((f) => URL.createObjectURL(f))); }} className="w-full text-xs" />
-                {prodPreviews.length > 0 && (
-                  <div className="flex gap-2 mt-3 flex-wrap">
-                    {prodPreviews.map((src, i) => <img key={i} src={src} alt={`preview ${i + 1}`} className="w-14 h-14 rounded-lg object-cover border" />)}
-                  </div>
-                )}
-                <div className="text-[11px] text-gray-500 mt-2">Or paste image URLs (comma separated)</div>
-                <input value={prodForm.images} onChange={(e) => setProdForm({ ...prodForm, images: e.target.value })} placeholder="https://res.cloudinary.com/…" className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-xs" />
-              </div>
-              <div className="flex gap-2">
-                <button disabled={prodBusy} className="flex-1 bg-primary text-white rounded-full py-3 font-bold text-sm disabled:opacity-50">
-                  {prodBusy ? 'Saving…' : prodEditingId ? 'Update Product' : 'Create Product'}
-                </button>
-                {prodEditingId && <button type="button" onClick={resetProd} className="px-4 rounded-full border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50">Cancel</button>}
-              </div>
-            </form>
-
-            <div className="mt-5 space-y-2 max-h-[420px] overflow-auto pr-1">
-              {dhenuProducts.map((p) => (
-                <div key={p._id} className="flex flex-wrap items-center gap-3 border border-gray-100 rounded-xl p-2.5">
-                  <SmartImage src={p.images?.[0]} alt={p.name} className="w-11 h-11 rounded-xl object-cover border shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm truncate">{p.name}</div>
-                    <div className="text-[11px] text-gray-500">{fmtRs(p.price)} · {p.stock} in stock {p.isActive ? '' : '· Hidden'}</div>
-                  </div>
-                  <button onClick={() => startProdEdit(p)} className="text-xs font-bold px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-primary hover:text-primary">Edit</button>
-                  <button onClick={() => removeProd(p)} className="text-xs font-bold px-3 py-1.5 rounded-full border border-red-200 text-red-600 hover:bg-red-50">Delete</button>
-                </div>
-              ))}
-              {dhenuProducts.length === 0 && <div className="text-xs text-gray-400 py-4 text-center">No DhenuVera products yet — add your first one above.</div>}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -1392,7 +1120,7 @@ function BannersTab({ banners, onChanged }) {
           <p className="text-xs text-gray-500 mb-4">Banners appear in the homepage hero slider, in display order. Images are shown clean — upload wide shots (1600×600 recommended).</p>
           <form onSubmit={save} className="space-y-3">
             <Field label="Title *">
-              <input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. DhenuVera Festive Collection" className={inputCls} />
+              <input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. Festive Collection Sale" className={inputCls} />
             </Field>
             <Field label="Subtitle">
               <input value={form.subtitle} onChange={e => setForm({ ...form, subtitle: e.target.value })} placeholder="e.g. Sambrani Cups & Cone Dhoop in 6 fragrances" className={inputCls} />
@@ -1400,7 +1128,7 @@ function BannersTab({ banners, onChanged }) {
             <div className="border-2 border-dashed border-accent/20 rounded-xl p-4 bg-cream/50">
               <div className="text-xs font-bold mb-2 flex items-center gap-1.5"><IconCloud className="w-4 h-4" /> Banner Image * (wide, landscape)</div>
               <input type="file" accept="image/*" onChange={handleFile} className="w-full text-xs" />
-              {shown && <img src={shown} alt="banner preview" className="w-full h-32 rounded-lg object-cover border mt-2" />}
+              {shown && <img src={shown} alt="banner preview" className="w-full h-32 rounded-lg object-contain border mt-2" />}
               <div className="text-[11px] text-gray-500 mt-2">Or paste image URL</div>
               <input value={form.image} onChange={e => setForm({ ...form, image: e.target.value })} placeholder="https://res.cloudinary.com/…" className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-xs" />
             </div>
@@ -1439,7 +1167,7 @@ function BannersTab({ banners, onChanged }) {
           <div className="space-y-3">
             {[...banners].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((b, i) => (
               <div key={b._id} className={`border rounded-2xl overflow-hidden ${b.isActive ? 'border-gray-100 bg-white' : 'border-dashed border-gray-200 bg-gray-50 opacity-80'}`}>
-                <img src={b.image} alt={b.title} className="w-full h-36 object-cover" />
+                <img src={b.image} alt={b.title} className="w-full h-36 object-contain" />
                 <div className="flex items-center gap-3 p-3">
                   <div className="w-8 h-8 rounded-full bg-sacred-maroon/5 border border-sacred-maroon/15 flex items-center justify-center text-xs font-bold text-sacred-maroon shrink-0">{i + 1}</div>
                   <div className="flex-1 min-w-0">
@@ -1548,6 +1276,14 @@ function ProductsTab({ categories, products, onChanged }) {
     finally { setBusyId(null); }
   };
 
+  // Homepage picker: which products show in "Handpicked For You"
+  const toggleFeatured = async (p) => {
+    setBusyId(p._id);
+    try { await api.put(`/products/${p._id}`, { isFeatured: !p.isFeatured }); toast.success(p.isFeatured ? 'Removed from homepage' : 'Added to homepage'); onChanged(); }
+    catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+    finally { setBusyId(null); }
+  };
+
   const remove = async (p) => {
     if (!window.confirm(`Delete product "${p.name}"?`)) return;
     setBusyId(p._id);
@@ -1621,7 +1357,7 @@ function ProductsTab({ categories, products, onChanged }) {
               <input type="file" multiple accept="image/*" onChange={handleFiles} className="w-full text-xs" />
               {previews.length > 0 && (
                 <div className="flex gap-2 mt-3 flex-wrap">
-                  {previews.map((src, i) => <img key={i} src={src} alt={`preview ${i + 1}`} className="w-16 h-16 rounded-lg object-cover border" />)}
+                  {previews.map((src, i) => <img key={i} src={src} alt={`preview ${i + 1}`} className="w-16 h-16 rounded-lg object-contain border" />)}
                 </div>
               )}
               <div className="text-[11px] text-gray-500 mt-2">Or paste image URLs (comma separated) — merged with uploads</div>
@@ -1654,7 +1390,7 @@ function ProductsTab({ categories, products, onChanged }) {
             const catName = p.category?.name || (flatCats.find(c => c._id === p.category)?.name) || '—';
             return (
               <div key={p._id} className={`flex flex-wrap items-center gap-3 border rounded-xl p-3 ${p.isActive ? 'border-gray-100 bg-white' : 'border-red-100 bg-red-50/40 opacity-80'}`}>
-                <SmartImage src={p.images?.[0]} alt={p.name} className="w-12 h-12 rounded-xl object-cover border shrink-0" />
+                <SmartImage src={p.images?.[0]} alt={p.name} className="w-12 h-12 rounded-xl object-contain border shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-sm truncate">{p.name}</div>
                   <div className="text-[11px] text-gray-500">{catName} · {fmtRs(p.price)} · {p.stock} in stock</div>
@@ -1665,6 +1401,7 @@ function ProductsTab({ categories, products, onChanged }) {
                 </div>
                 <div className="flex flex-wrap justify-end gap-1.5 shrink-0 max-w-full">
                   <button onClick={() => startEdit(p)} className="text-xs font-bold px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-primary hover:text-primary">Edit</button>
+                  <button onClick={() => toggleFeatured(p)} disabled={busyId === p._id} title={p.isFeatured ? 'Remove from homepage' : 'Show on homepage'} className={`text-xs font-bold px-3 py-1.5 rounded-full border disabled:opacity-50 ${p.isFeatured ? 'border-sacred-saffron bg-sacred-sandal text-sacred-maroon' : 'border-gray-200 text-gray-500 hover:border-sacred-saffron hover:text-sacred-maroon'}`}>★ Home</button>
                   <button onClick={() => toggleActive(p)} disabled={busyId === p._id} className="text-xs font-bold px-3 py-1.5 rounded-full border border-gray-300 text-gray-500 hover:border-accent hover:text-accent-dark disabled:opacity-50">{p.isActive ? 'Hide' : 'Show'}</button>
                   <button onClick={() => remove(p)} disabled={busyId === p._id} className="text-xs font-bold px-3 py-1.5 rounded-full border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50">Delete</button>
                 </div>

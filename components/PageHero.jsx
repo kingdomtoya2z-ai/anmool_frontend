@@ -62,7 +62,7 @@ export default function PageHero({
         {image && (
           <div className="lg:w-[340px] shrink-0">
             <div className="rounded-3xl overflow-hidden border border-white/20 shadow-2xl">
-              <img src={image} alt={imageAlt} className="w-full h-52 md:h-64 object-cover" />
+              <img src={image} alt={imageAlt} className="w-full h-52 md:h-64 object-contain" />
             </div>
           </div>
         )}

@@ -202,7 +202,7 @@ export function OrderCard({ order, expanded, onToggle }) {
                   <SmartImage
                     src={it.image}
                     alt={it.name}
-                    className="w-10 h-10 rounded-lg object-cover border shrink-0"
+                    className="w-10 h-10 rounded-lg object-contain border shrink-0"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{it.name}</div>

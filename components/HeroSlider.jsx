@@ -103,15 +103,26 @@ export default function HeroSlider() {
         >
           {slides.map((s, i) => (
             <div key={s.key || i} className="w-full shrink-0 block" draggable={false}>
-              <img
-                src={s.image}
-                alt={s.title}
-                className="w-full h-[300px] sm:h-[420px] md:h-[560px] lg:h-[620px] object-cover"
-                width={1600}
-                height={700}
-                loading={i === 0 ? 'eager' : 'lazy'}
-                draggable={false}
-              />
+              {/* Full image always visible: blurred fill behind + contain on top (no cropping on any screen) */}
+              <div className="relative w-full h-[300px] sm:h-[420px] md:h-[560px] lg:h-[620px] overflow-hidden bg-[#1c0d08]">
+                <img
+                  src={s.image}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-60"
+                  loading="lazy"
+                  draggable={false}
+                />
+                <img
+                  src={s.image}
+                  alt={s.title}
+                  className="relative w-full h-full object-contain"
+                  width={1600}
+                  height={700}
+                  loading={i === 0 ? 'eager' : 'lazy'}
+                  draggable={false}
+                />
+              </div>
               {/* Caption bar below the image — keeps the photo untouched */}
               <div className="bg-[#FFFDF8] border-t border-sacred-maroon/10 px-4 py-4 md:px-8 md:py-5 flex flex-wrap items-center gap-3 md:gap-5">
                 <div className="flex-1 min-w-[200px]">

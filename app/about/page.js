@@ -12,12 +12,12 @@ const RANGE = [
   { icon: IconDroplet, title: 'Milk', desc: 'Local Karnal supply — freshness and trust, delivered daily.', href: '/search?q=milk' },
   { icon: IconFlame, title: 'Pure Desi Ghee', desc: 'Authentic taste and traditional goodness, supplied across India.', href: '/search?q=ghee' },
   { icon: IconLeaf, title: 'Cow Dung Ash & Cakes', desc: 'For traditional, religious and household uses — Havan and Pooja ready.', href: '/search?q=cow+dung' },
-  { icon: IconFlame, title: 'DhenuVera Incense', desc: 'Cone Dhoop, Stick Dhoop and Sambrani Cups in 6 fragrances.', href: '/search?q=dhenuvera' },
+  { icon: IconFlame, title: 'Sacred Pooja Essentials', desc: 'Dhoop, Sambrani Cups and traditional fragrances for daily worship.', href: '/search?q=dhoop' },
 ];
 
 const STATS = [
   { value: '1.5+', label: 'Years of honest journey' },
-  { value: '06', label: 'DhenuVera fragrances' },
+  { value: '100+', label: 'Pure products' },
   { value: 'Pan-India', label: 'Shipping across India' },
   { value: '24×7', label: 'Customer support' },
 ];
@@ -32,7 +32,7 @@ export default function About() {
         breadcrumb={[{ label: 'About' }]}
         meta={
           <div className="flex flex-wrap gap-2">
-            {['Karnal, Haryana', 'Dairy roots', 'DhenuVera incense'].map((t) => (
+            {['Karnal, Haryana', 'Dairy roots', 'Pooja essentials'].map((t) => (
               <span key={t} className="text-[11px] font-bold bg-white/10 border border-white/20 rounded-full px-3.5 py-1.5 text-white/85">{t}</span>
             ))}
           </div>
@@ -72,8 +72,8 @@ export default function About() {
           <p className="text-sm text-stone-600 leading-relaxed">
             We began by supplying milk in the local areas of Karnal, Haryana, and we continue to serve our
             local customers today. Encouraged by love and positive feedback, we expanded into Pure Desi Ghee
-            across India through our trusted sourcing network — and then into traditional essentials and the
-            DhenuVera incense range.
+            across India through our trusted sourcing network — and then into traditional
+            and pooja essentials.
           </p>
         </div>
 

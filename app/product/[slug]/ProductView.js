@@ -86,12 +86,12 @@ export default function ProductPage() {
       <div className="grid md:grid-cols-2 gap-8 bg-white rounded-3xl border border-gray-100 p-6 md:p-8">
         <div>
           <div className="aspect-square bg-cream rounded-2xl overflow-hidden border border-accent/15 relative">
-            <SmartImage src={product.images?.[imgIdx]} alt={product.name} className="w-full h-full object-cover" />
+            <SmartImage src={product.images?.[imgIdx]} alt={product.name} className="w-full h-full object-contain" />
             {discount && <span className="absolute top-4 left-4 bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full">-{discount}%</span>}
           </div>
           <div className="flex gap-3 mt-4">
             {product.images?.map((img,i)=> (
-              <button key={i} onClick={()=>setImgIdx(i)} className={`w-16 h-16 rounded-xl overflow-hidden border-2 ${i===imgIdx?'border-primary':'border-gray-100'}`}><img src={img} className="w-full h-full object-cover" /></button>
+              <button key={i} onClick={()=>setImgIdx(i)} className={`w-16 h-16 rounded-xl overflow-hidden border-2 ${i===imgIdx?'border-primary':'border-gray-100'}`}><img src={img} className="w-full h-full object-contain" /></button>
             ))}
           </div>
         </div>

@@ -27,8 +27,8 @@ export default function ProductCard({ product }) {
 
   return (
     <Link href={`/product/${product.slug}`} className="group spiritual-card rounded-3xl overflow-hidden hover:shadow-[0_20px_50px_-20px_rgba(20,40,8,0.5)] hover:-translate-y-1 transition-all duration-300 flex flex-col">
-      <div className="relative bg-gradient-to-b from-smoke-100 to-sacred-sandal aspect-[4/3] sm:aspect-square overflow-hidden">
-        <SmartImage src={product.images?.[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+      <div className="relative bg-white aspect-square overflow-hidden">
+        <SmartImage src={product.images?.[0]} alt={product.name} className="w-full h-full object-contain bg-white transition duration-500" />
         <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-white/30 to-transparent pointer-events-none" />
         {discount && (
           <span className="absolute top-3 left-3 bg-sacred-maroon text-sacred-diya text-xs font-bold px-2.5 py-1 rounded-full shadow">-{discount}% OFF</span>
