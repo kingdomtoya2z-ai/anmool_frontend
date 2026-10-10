@@ -7,11 +7,11 @@ import SmartImage from '@/components/SmartImage';
 import { IconCart, IconCheckCircle, IconLock } from '@/components/icons';
 
 export default function CartPage() {
-  const { cart, updateQty, removeFromCart, subtotal, shipping, total } = useCart();
+  const { cart, hydrated, updateQty, removeFromCart, subtotal, shipping, total } = useCart();
   const { user } = useAuth();
   const router = useRouter();
 
-  if (cart.length===0) {
+  if (!hydrated || cart.length===0) {
     return (
       <div className="max-w-[900px] mx-auto px-4 py-16 text-center">
         <div className="bg-white rounded-3xl border border-gray-100 p-10">

@@ -7,6 +7,7 @@ import api from '@/lib/api';
 import { useAuth } from '@/lib/authContext';
 import toast from 'react-hot-toast';
 import { ButtonLoader } from '@/components/Loader';
+import PasswordInput from '@/components/PasswordInput';
 
 const RESEND_WAIT = 60;
 
@@ -130,11 +131,36 @@ function ForgotInner() {
           <form onSubmit={handlePassword} className="space-y-4">
             <div>
               <label className="text-sm font-semibold">New password *</label>
-              <input value={password} onChange={e=>setPassword(e.target.value)} type="password" required minLength={6} placeholder="Min 6 characters" className={inputCls} />
+              <PasswordInput
+                name="new-password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                placeholder="Min 6 characters"
+              />
             </div>
             <div>
               <label className="text-sm font-semibold">Confirm password *</label>
-              <input value={confirm} onChange={e=>setConfirm(e.target.value)} type="password" required minLength={6} placeholder="Repeat new password" className={inputCls} />
+              <PasswordInput
+                name="confirm-password"
+                autoComplete="new-password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                required
+                minLength={6}
+                placeholder="Repeat new password"
+              />
+              {confirm.length > 0 && (
+                <div
+                  className={`text-xs mt-1.5 font-semibold ${
+                    confirm === password ? 'text-green-700' : 'text-red-600'
+                  }`}
+                >
+                  {confirm === password ? '✓ Passwords match' : 'Passwords do not match'}
+                </div>
+              )}
             </div>
             <button disabled={loading} className="w-full bg-primary text-white rounded-full py-3 font-bold hover:bg-primary-dark transition disabled:opacity-60 flex items-center justify-center gap-2">{loading ? <ButtonLoader /> : 'Reset Password & Login'}</button>
           </form>

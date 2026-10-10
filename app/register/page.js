@@ -7,8 +7,27 @@ import api from '@/lib/api';
 import { useAuth } from '@/lib/authContext';
 import toast from 'react-hot-toast';
 import { ButtonLoader } from '@/components/Loader';
+import PasswordInput from '@/components/PasswordInput';
 
 const RESEND_WAIT = 60;
+
+// Readable suggestions (no ambiguous 0/O, 1/l) so they can be typed by hand.
+const generatePassword = (len = 10) => {
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower = 'abcdefghijkmnpqrstuvwxyz';
+  const digits = '23456789';
+  const symbols = '@#$%&*';
+  const all = upper + lower + digits + symbols;
+  const pick = (set) => set[Math.floor(Math.random() * set.length)];
+  const chars = [pick(upper), pick(lower), pick(digits), pick(symbols)];
+  while (chars.length < len) chars.push(pick(all));
+  // Fisher–Yates so the guaranteed character classes aren't always in front
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join('');
+};
 
 function RegisterInner() {
   const [step, setStep] = useState('details'); // details | otp
@@ -137,7 +156,22 @@ function RegisterInner() {
             </div>
             <div>
               <label className="text-sm font-semibold">Password *</label>
-              <input value={form.password} onChange={e=>setForm({...form, password:e.target.value})} type="password" required minLength={6} placeholder="Min 6 characters" className={inputCls} />
+              <PasswordInput
+                name="new-password"
+                autoComplete="new-password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required
+                minLength={6}
+                placeholder="Min 6 characters"
+              />
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, password: generatePassword(10) }))}
+                className="mt-1.5 text-[11px] font-semibold text-primary hover:underline"
+              >
+                Suggest a strong password
+              </button>
             </div>
             <button disabled={loading} className="w-full bg-primary text-white rounded-full py-3 font-bold hover:bg-primary-dark transition disabled:opacity-60 flex items-center justify-center gap-2">{loading ? <ButtonLoader /> : 'Send Verification Code'}</button>
           </form>

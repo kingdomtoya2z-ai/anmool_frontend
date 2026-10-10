@@ -7,6 +7,7 @@ import api from '@/lib/api';
 import { useAuth } from '@/lib/authContext';
 import toast from 'react-hot-toast';
 import Loader, { ButtonLoader } from '@/components/Loader';
+import PasswordInput from '@/components/PasswordInput';
 
 function LoginInner() {
   const [email, setEmail] = useState('');
@@ -54,7 +55,14 @@ function LoginInner() {
               <label className="text-sm font-semibold">Password</label>
               <Link href="/forgot-password" className="text-xs font-bold text-primary hover:underline">Forgot password?</Link>
             </div>
-            <input value={password} onChange={e=>setPassword(e.target.value)} type="password" required placeholder="••••••" className="w-full mt-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+            <PasswordInput
+              name="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              placeholder="••••••"
+            />
           </div>
           <button disabled={loading} className="w-full bg-primary text-white rounded-full py-3 font-bold hover:bg-primary-dark transition disabled:opacity-60 flex items-center justify-center gap-2">{loading ? <ButtonLoader /> : 'Login'}</button>
         </form>

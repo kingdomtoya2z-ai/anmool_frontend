@@ -554,6 +554,26 @@ function ProfileTab({ user, logout }) {
     pincode: user.address?.pincode || '',
   });
   const [savingAddr, setSavingAddr] = useState(false);
+  // Once the visitor edits anything, stop mirroring the profile in — otherwise
+  // a late-arriving /auth/me response would overwrite what they just typed.
+  const [dirty, setDirty] = useState(false);
+
+  // The auth layer shows the cached profile first, then reconciles with the
+  // backend. Follow that authoritative copy so the form is never left holding
+  // a stale name/phone/address after a fresh login.
+  useEffect(() => {
+    if (dirty) return;
+    setName(user.name || '');
+    setPhone(user.phone || '');
+    setAddr({
+      fullName: user.address?.fullName || user.name || '',
+      phone: user.address?.phone || user.phone || '',
+      address: user.address?.address || '',
+      city: user.address?.city || '',
+      state: user.address?.state || '',
+      pincode: user.address?.pincode || '',
+    });
+  }, [user, dirty]);
 
   const pickFile = (e) => {
     const f = e.target.files?.[0];
@@ -608,7 +628,10 @@ function ProfileTab({ user, logout }) {
     } finally { setSavingAddr(false); }
   };
 
-  const setAddrField = (k, v) => setAddr((prev) => ({ ...prev, [k]: v }));
+  const setAddrField = (k, v) => {
+    setDirty(true);
+    setAddr((prev) => ({ ...prev, [k]: v }));
+  };
   const addrInputCls = 'w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sacred-saffron/40 focus:border-sacred-saffron bg-white';
 
   return (
@@ -648,11 +671,11 @@ function ProfileTab({ user, logout }) {
         <form onSubmit={saveDetails} className="grid sm:grid-cols-2 gap-4 mt-5">
           <label className="block">
             <span className="text-xs font-semibold text-stone-600 mb-1 block">Full Name</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} required className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sacred-saffron/40 focus:border-sacred-saffron bg-white" />
+            <input value={name} onChange={(e) => { setDirty(true); setName(e.target.value); }} required className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sacred-saffron/40 focus:border-sacred-saffron bg-white" />
           </label>
           <label className="block">
             <span className="text-xs font-semibold text-stone-600 mb-1 block">Phone (10-digit)</span>
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} required maxLength={10} className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sacred-saffron/40 focus:border-sacred-saffron bg-white" />
+            <input value={phone} onChange={(e) => { setDirty(true); setPhone(e.target.value); }} required maxLength={10} className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sacred-saffron/40 focus:border-sacred-saffron bg-white" />
           </label>
           <div className="sm:col-span-2 flex flex-col sm:flex-row gap-2">
             <button disabled={saving} className="flex-1 bg-gradient-to-br from-sacred-maroon to-sacred-deepmaroon text-white rounded-full py-3 text-sm font-bold hover:opacity-90 disabled:opacity-50 shadow">
