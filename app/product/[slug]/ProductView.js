@@ -1,7 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import DOMPurify from 'isomorphic-dompurify';
 import { useCart } from '@/lib/cartContext';
 import { useAuth } from '@/lib/authContext';
 import ProductCard from '@/components/ProductCard';
@@ -26,6 +27,11 @@ export default function ProductPage() {
   const [related, setRelated] = useState([]);
   const [qty, setQty] = useState(1);
   const [imgIdx, setImgIdx] = useState(0);
+
+  const cleanDescription = useMemo(
+    () => DOMPurify.sanitize(product?.description || ''),
+    [product?.description]
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -116,7 +122,7 @@ export default function ProductPage() {
           </div>
           <div className="text-xs text-gray-500 mt-1">Inclusive of all taxes • Shipping: Free above ₹300, else ₹100</div>
 
-          <p className="text-sm text-gray-600 leading-relaxed mt-6 border-t pt-6">{product.description}</p>
+          <div className="html-desc text-sm text-gray-600 leading-relaxed mt-6 border-t pt-6" dangerouslySetInnerHTML={{ __html: cleanDescription }} />
 
           <div className="flex items-center gap-4 mt-6">
             <div className="flex items-center gap-2 border rounded-full px-2 py-1">

@@ -18,7 +18,7 @@ const CHANNELS = [
     icon: IconPhone,
     label: 'CALL US',
     title: '90342-39674',
-    desc: 'Also on 70784-20222',
+    desc: 'Mon–Sat, 9am–7pm',
     href: 'tel:9034239674',
   },
   {

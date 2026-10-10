@@ -227,6 +227,12 @@ export function OrderCard({ order, expanded, onToggle }) {
                 <span>Subtotal</span>
                 <b>{fmtRs(order.subtotal)}</b>
               </div>
+              {order.discountAmount > 0 && (
+                <div className="flex justify-between text-green-700">
+                  <span>Coupon {order.couponCode}</span>
+                  <b>−{fmtRs(order.discountAmount)}</b>
+                </div>
+              )}
               <div className="flex justify-between text-gray-600 mt-1">
                 <span>Shipping</span>
                 <b>{order.shippingCharge ? fmtRs(order.shippingCharge) : 'FREE'}</b>

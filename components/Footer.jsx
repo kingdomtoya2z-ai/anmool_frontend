@@ -33,8 +33,8 @@ export default function Footer() {
 
       <div className="max-w-[1400px] mx-auto px-4 py-10 grid md:grid-cols-4 gap-8 relative">
         <div>
-          <div className="flex items-center gap-3 mb-4 bg-[#FFFDF8] rounded-2xl px-3 py-2 w-fit shadow">
-            <img src="/logo.png" alt="Anmool" className="h-10 w-auto object-contain" width={140} height={45} />
+          <div className="mb-4 w-fit">
+            <img src="/footerlogo.png" alt="Anmool Dairy" className="h-12 w-auto object-contain" width={220} height={74} />
           </div>
           <p className="text-sm text-white/70 leading-relaxed">
             Bringing Pavitra Products to Your Family — With Purity, Care and Trust. From Karnal, Haryana:
@@ -51,7 +51,7 @@ export default function Footer() {
           </div>
           <div className="mt-4 space-y-2 text-sm text-white/80">
             <div className="flex items-start gap-2"><IconPin className="w-4 h-4 mt-0.5 shrink-0 text-sacred-diya" /> Village Budhanpur, Karnal, Haryana - 132001</div>
-            <div className="flex items-center gap-2"><IconPhone className="w-4 h-4 shrink-0 text-sacred-diya" /> 90342-39674 | 70784-20222</div>
+            <div className="flex items-center gap-2"><IconPhone className="w-4 h-4 shrink-0 text-sacred-diya" /> 90342-39674</div>
             <div className="flex items-center gap-2"><IconMail className="w-4 h-4 shrink-0 text-sacred-diya" /> anmooldairy@gmail.com</div>
           </div>
         </div>

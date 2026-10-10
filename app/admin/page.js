@@ -8,7 +8,7 @@ import Link from 'next/link';
 import {
   IconChart, IconBox, IconGrid, IconFlame, IconUsers, IconImage,
   IconAlert, IconTruck, IconCheckCircle, IconCash, IconStore,
-  IconCloud, IconSearch, IconDownload, IconPhone, IconCopy, IconClock,
+  IconCloud, IconSearch, IconDownload, IconPhone, IconCopy, IconClock, IconTag,
 } from '@/components/icons';
 
 /* ------------------------------------------------------------------ */
@@ -124,6 +124,7 @@ export default function AdminPage() {
   const [orders, setOrders] = useState([]);
   const [users, setUsers] = useState([]);
   const [banners, setBanners] = useState([]);
+  const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchOrders = async (range) => {
@@ -146,6 +147,7 @@ export default function AdminPage() {
       api.get('/orders').then(r => setOrders(r.data || [])).catch(() => {}),
       api.get('/admin/users').then(r => setUsers(r.data || [])).catch(() => {}),
       api.get('/banners/all').then(r => setBanners(r.data || [])).catch(() => {}),
+      api.get('/coupons').then(r => setCoupons(r.data || [])).catch(() => {}),
     ];
     await Promise.all(jobs);
     setLoading(false);
@@ -177,6 +179,7 @@ export default function AdminPage() {
     { id: 'banners', label: 'Banners', icon: IconImage, desc: 'Homepage hero slider' },
     { id: 'categories', label: 'Categories', icon: IconGrid, desc: 'Homepage & menu' },
     { id: 'products', label: 'Products', icon: IconFlame, desc: 'Catalogue & stock' },
+    { id: 'coupons', label: 'Coupons', icon: IconTag, desc: 'Discount codes' },
     { id: 'users', label: 'Users', icon: IconUsers, desc: 'Registered customers' },
   ];
 
@@ -264,6 +267,7 @@ export default function AdminPage() {
           {!loading && tab === 'categories' && <CategoriesTab categories={categories} products={products} onChanged={loadAll} />}
           {!loading && tab === 'products' && <ProductsTab categories={categories} products={products} onChanged={loadAll} />}
           {!loading && tab === 'users' && <UsersTab users={users} />}
+          {!loading && tab === 'coupons' && <CouponsTab coupons={coupons} products={products} onChanged={loadAll} />}
         </div>
       </div>
     </div>
@@ -786,6 +790,7 @@ function OrdersTab({ orders, reload }) {
                     <div className="bg-white rounded-xl border p-4 text-xs space-y-1.5">
                       <div className="text-sm font-bold mb-2">Payment</div>
                       <div className="flex justify-between text-gray-600"><span>Subtotal</span><b>{fmtRs(o.subtotal)}</b></div>
+                      {o.discountAmount > 0 && <div className="flex justify-between text-green-700"><span>Coupon {o.couponCode}</span><b>−{fmtRs(o.discountAmount)}</b></div>}
                       <div className="flex justify-between text-gray-600"><span>Shipping</span><b>{o.shippingCharge ? fmtRs(o.shippingCharge) : 'FREE'}</b></div>
                       <div className="flex justify-between border-t pt-1.5"><span>Total</span><b className="text-primary">{fmtRs(o.total)}</b></div>
                       <div className="text-gray-400">{o.paymentMethod?.toUpperCase()} · <span className={o.paymentStatus === 'paid' ? 'text-green-600 font-semibold' : 'text-amber-600 font-semibold'}>{o.paymentStatus}</span></div>
@@ -1346,8 +1351,14 @@ function ProductsTab({ categories, products, onChanged }) {
             <Field label="Short description">
               <input value={form.shortDescription} onChange={e => setForm({ ...form, shortDescription: e.target.value })} placeholder="One-line teaser (optional)" className={inputCls} />
             </Field>
-            <Field label="Full description *">
-              <textarea required rows={3} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Detailed description…" className={inputCls} />
+            <Field label="Full description * (HTML allowed — <b>, <ul><li>, <p> etc.)">
+              <textarea required rows={5} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="<p>Rich description…</p><ul><li>Point one</li><li>Point two</li></ul>" className={`${inputCls} font-mono text-[13px]`} />
+              {form.description.trim() && (
+                <div className="mt-2 border border-gray-200 rounded-xl p-3 bg-cream/40">
+                  <div className="text-[10px] font-bold tracking-widest text-gray-400 mb-1">PREVIEW (as customers see it)</div>
+                  <div className="html-desc text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: form.description }} />
+                </div>
+              )}
             </Field>
             <Field label="Tags (comma separated)">
               <input value={form.tags} onChange={e => setForm({ ...form, tags: e.target.value })} placeholder="sambrani, pooja, incense" className={inputCls} />
@@ -1409,6 +1420,196 @@ function ProductsTab({ categories, products, onChanged }) {
             );
           })}
           {filtered.length === 0 && <div className="text-sm text-gray-400 py-8 text-center bg-white rounded-2xl border border-dashed">No products found. Add your first product — it goes live instantly.</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Coupons tab — discount codes (active/inactive, min order, products) */
+/* ------------------------------------------------------------------ */
+
+function CouponsTab({ coupons, products, onChanged }) {
+  const empty = { code: '', description: '', discountType: 'percent', discountValue: '', minOrderAmount: '0', applicableProducts: [], expiresAt: '', usageLimit: '', isActive: true };
+  const [form, setForm] = useState(empty);
+  const [editingId, setEditingId] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [busyId, setBusyId] = useState(null);
+  const [prodSearch, setProdSearch] = useState('');
+
+  const reset = () => { setForm(empty); setEditingId(null); setProdSearch(''); };
+
+  const startEdit = (c) => {
+    setEditingId(c._id);
+    setForm({
+      code: c.code,
+      description: c.description || '',
+      discountType: c.discountType,
+      discountValue: c.discountValue,
+      minOrderAmount: String(c.minOrderAmount ?? 0),
+      applicableProducts: (c.applicableProducts || []).map((p) => String(p._id || p)),
+      expiresAt: c.expiresAt ? String(c.expiresAt).slice(0, 10) : '',
+      usageLimit: c.usageLimit || '',
+      isActive: !!c.isActive,
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const toggleProd = (id) => setForm((f) => ({
+    ...f,
+    applicableProducts: f.applicableProducts.includes(id)
+      ? f.applicableProducts.filter((x) => x !== id)
+      : [...f.applicableProducts, id],
+  }));
+
+  const filteredProducts = (products || []).filter((p) => {
+    const s = prodSearch.trim().toLowerCase();
+    return !s || (p.name || '').toLowerCase().includes(s);
+  }).slice(0, 60);
+
+  const save = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const body = {
+        description: form.description,
+        discountType: form.discountType,
+        discountValue: Number(form.discountValue),
+        minOrderAmount: Number(form.minOrderAmount) || 0,
+        applicableProducts: form.applicableProducts,
+        isActive: form.isActive,
+        expiresAt: form.expiresAt || null,
+        usageLimit: form.usageLimit ? Number(form.usageLimit) : null,
+      };
+      if (editingId) {
+        await api.put(`/coupons/${editingId}`, body);
+        toast.success('Coupon updated');
+      } else {
+        body.code = form.code;
+        await api.post('/coupons', body);
+        toast.success(`Coupon ${form.code.toUpperCase()} created`);
+      }
+      reset();
+      onChanged();
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to save coupon'); }
+    finally { setBusy(false); }
+  };
+
+  const toggleActive = async (c) => {
+    setBusyId(c._id);
+    try {
+      await api.put(`/coupons/${c._id}`, { isActive: !c.isActive });
+      toast.success(c.isActive ? 'Coupon deactivated' : 'Coupon activated');
+      onChanged();
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+    finally { setBusyId(null); }
+  };
+
+  const remove = async (c) => {
+    if (!window.confirm(`Delete coupon "${c.code}"? Users will no longer be able to use it.`)) return;
+    setBusyId(c._id);
+    try { await api.delete(`/coupons/${c._id}`); toast.success('Coupon deleted'); onChanged(); }
+    catch (err) { toast.error(err.response?.data?.message || 'Delete failed'); }
+    finally { setBusyId(null); }
+  };
+
+  const fmtExpiry = (d) => (!d ? 'No expiry' : new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }));
+
+  return (
+    <div className="mt-6 grid lg:grid-cols-5 gap-6">
+      <div className="lg:col-span-2">
+        <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 shadow-sm lg:sticky lg:top-24">
+          <h3 className="font-bold text-lg">{editingId ? 'Edit Coupon' : 'New Discount Coupon'}</h3>
+          <p className="text-xs text-gray-500 mb-4">Active coupons are suggested at checkout when the cart qualifies.</p>
+          <form onSubmit={save} className="space-y-3">
+            <Field label="Coupon Code * (e.g. DIWALI10)">
+              <input required={!editingId} disabled={!!editingId} value={form.code} onChange={e => setForm({ ...form, code: e.target.value.toUpperCase().replace(/\s/g, '') })} placeholder="DIWALI10" className={`${inputCls} uppercase font-bold tracking-widest disabled:bg-gray-50`} />
+            </Field>
+            <Field label="Description (shown at checkout)">
+              <input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="e.g. Diwali special — 10% off" className={inputCls} />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Discount Type *">
+                <select value={form.discountType} onChange={e => setForm({ ...form, discountType: e.target.value })} className={inputCls}>
+                  <option value="percent">Percent (%)</option>
+                  <option value="flat">Flat (₹)</option>
+                </select>
+              </Field>
+              <Field label={form.discountType === 'percent' ? 'Value % * (max 90)' : 'Value ₹ *'}>
+                <input required type="number" min="1" max={form.discountType === 'percent' ? 90 : undefined} value={form.discountValue} onChange={e => setForm({ ...form, discountValue: e.target.value })} placeholder={form.discountType === 'percent' ? '10' : '100'} className={inputCls} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Min. Order ₹ (0 = none)">
+                <input type="number" min="0" value={form.minOrderAmount} onChange={e => setForm({ ...form, minOrderAmount: e.target.value })} placeholder="499" className={inputCls} />
+              </Field>
+              <Field label="Usage Limit (blank = unlimited)">
+                <input type="number" min="1" value={form.usageLimit} onChange={e => setForm({ ...form, usageLimit: e.target.value })} placeholder="100" className={inputCls} />
+              </Field>
+            </div>
+            <Field label="Expiry (blank = never)">
+              <input type="date" value={form.expiresAt} onChange={e => setForm({ ...form, expiresAt: e.target.value })} className={inputCls} />
+            </Field>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} className="accent-primary w-4 h-4" />
+              <span className="font-semibold text-gray-700">Active (only active coupons apply at checkout)</span>
+            </label>
+            <div className="border-2 border-dashed border-accent/20 rounded-xl p-4 bg-cream/50">
+              <div className="text-xs font-bold mb-1">Applies To</div>
+              <p className="text-[11px] text-gray-500 mb-2">Leave empty = whole cart. Or pick specific products:</p>
+              <input value={prodSearch} onChange={e => setProdSearch(e.target.value)} placeholder="Search products…" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs mb-2 focus:outline-none focus:ring-2 focus:ring-primary/20" />
+              <div className="flex flex-wrap gap-1.5 max-h-44 overflow-auto pr-1">
+                {filteredProducts.map((p) => {
+                  const id = String(p._id);
+                  const on = form.applicableProducts.includes(id);
+                  return (
+                    <button type="button" key={id} onClick={() => toggleProd(id)} className={`text-[11px] font-bold px-2.5 py-1.5 rounded-full border transition ${on ? 'bg-primary text-white border-primary' : 'bg-white border-gray-200 text-gray-600 hover:border-primary'}`}>
+                      {p.name}
+                    </button>
+                  );
+                })}
+                {filteredProducts.length === 0 && <span className="text-[11px] text-gray-400">No products match.</span>}
+              </div>
+              {form.applicableProducts.length > 0 && <div className="text-[11px] text-primary font-bold mt-2">{form.applicableProducts.length} product(s) selected</div>}
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button disabled={busy} className="flex-1 bg-primary text-white rounded-full py-3 font-bold text-sm disabled:opacity-50">
+                {busy ? 'Saving…' : editingId ? 'Update Coupon' : 'Create Coupon'}
+              </button>
+              {editingId && <button type="button" onClick={reset} className="px-4 rounded-full border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50">Cancel</button>}
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div className="lg:col-span-3">
+        <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 shadow-sm">
+          <h3 className="font-bold text-lg mb-1">All Coupons ({coupons.length})</h3>
+          <p className="text-xs text-gray-500 mb-4">Toggle active/inactive instantly, or delete anytime.</p>
+          <div className="space-y-2">
+            {coupons.map((c) => (
+              <div key={c._id} className={`flex flex-wrap items-center gap-3 border rounded-xl p-3 ${c.isActive ? 'border-gray-100 bg-white' : 'border-dashed border-gray-200 bg-gray-50 opacity-80'}`}>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border ${c.isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-100 text-gray-400 border-gray-200'}`}>%</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-sm tracking-widest">{c.code}</div>
+                  <div className="text-[11px] text-gray-500">
+                    {c.discountType === 'percent' ? `${c.discountValue}% off` : `₹${c.discountValue} off`}
+                    {c.minOrderAmount > 0 && ` · min ₹${c.minOrderAmount}`}
+                    {(c.applicableProducts || []).length > 0 ? ` · ${(c.applicableProducts || []).length} product(s)` : ' · whole cart'}
+                    {` · used ${c.usedCount || 0}${c.usageLimit ? `/${c.usageLimit}` : ''} · ${fmtExpiry(c.expiresAt)}`}
+                  </div>
+                  {c.description && <div className="text-[11px] text-stone-400 truncate">{c.description}</div>}
+                </div>
+                <div className="flex flex-wrap justify-end gap-1.5 shrink-0 max-w-full">
+                  <button onClick={() => startEdit(c)} className="text-xs font-bold px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-primary hover:text-primary">Edit</button>
+                  <button onClick={() => toggleActive(c)} disabled={busyId === c._id} className={`text-xs font-bold px-3 py-1.5 rounded-full border disabled:opacity-50 ${c.isActive ? 'border-amber-200 text-amber-700 hover:bg-amber-50' : 'border-green-200 text-green-700 hover:bg-green-50'}`}>{c.isActive ? 'Deactivate' : 'Activate'}</button>
+                  <button onClick={() => remove(c)} disabled={busyId === c._id} className="text-xs font-bold px-3 py-1.5 rounded-full border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50">Delete</button>
+                </div>
+              </div>
+            ))}
+            {coupons.length === 0 && <div className="text-sm text-gray-400 py-8 text-center">No coupons yet. Create one — checkout will suggest it to qualifying carts.</div>}
+          </div>
         </div>
       </div>
     </div>

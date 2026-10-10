@@ -159,3 +159,17 @@ h4,h5,h6 { font-family: "Mukta", "Poppins", Arial, sans-serif; color: #142808; f
   50% { transform: translateY(-6px); }
 }
 .animate-floatY { animation: floatY 5s ease-in-out infinite; }
+
+/* Rendered product HTML descriptions (admin writes HTML, customers see this) */
+.html-desc p { margin: 0 0 0.6em; }
+.html-desc p:last-child { margin-bottom: 0; }
+.html-desc ul { list-style: disc; margin: 0.4em 0 0.8em 1.25em; }
+.html-desc ol { list-style: decimal; margin: 0.4em 0 0.8em 1.25em; }
+.html-desc li { margin: 0.25em 0; }
+.html-desc li::marker { color: #63A822; font-weight: bold; }
+.html-desc b, .html-desc strong { color: #142808; }
+.html-desc h1, .html-desc h2, .html-desc h3, .html-desc h4 { color: #142808; font-weight: bold; margin: 0.8em 0 0.4em; line-height: 1.3; }
+.html-desc h3 { font-size: 1.05em; }
+.html-desc h4 { font-size: 1em; }
+.html-desc a { color: #2E5A0E; font-weight: 600; text-decoration: underline; }
+.html-desc blockquote { border-left: 3px solid #63A822; padding-left: 0.8em; margin: 0.6em 0; color: #57534e; font-style: italic; }

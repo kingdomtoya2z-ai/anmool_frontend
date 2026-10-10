@@ -24,6 +24,10 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState('online');
   const [placed, setPlaced] = useState(null);
   const [autoFilled, setAutoFilled] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [applied, setApplied] = useState(null); // { code, discount }
+  const [suggest, setSuggest] = useState([]);
+  const [couponBusy, setCouponBusy] = useState(false);
 
   const formFromSaved = () => ({
     fullName: user?.address?.fullName || user?.name || '',
@@ -84,7 +88,7 @@ export default function Checkout() {
               {placed.orderNumber}
             </div>
             <div className="text-xs text-gray-500 mt-2">
-              Total ₹{placed.total} · Save this ID to track your order anytime — no login needed.
+              Total ₹{placed.total}{placed.discountAmount ? <span className="text-green-700 font-bold"> · You saved ₹{placed.discountAmount} with {placed.couponCode}</span> : ''} · Save this ID to track your order anytime — no login needed.
             </div>
             <button
               onClick={() => {
@@ -134,6 +138,33 @@ export default function Checkout() {
     );
   }
 
+  const cartItems = () => cart.map(c=> ({ product: c.product, quantity: c.quantity }));
+  const payable = Math.max(0, total - (applied?.discount || 0));
+
+  // Cart changed → drop the old coupon, refresh eligible-coupon suggestions
+  useEffect(() => {
+    setApplied(null);
+    if (!cart.length) { setSuggest([]); return; }
+    api.post('/coupons/suggest', { items: cartItems() })
+      .then(r => setSuggest(r.data || []))
+      .catch(() => setSuggest([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart]);
+
+  const applyCoupon = async (code) => {
+    const c = String(code ?? couponInput).trim().toUpperCase();
+    if (!c) { toast.error('Enter a coupon code'); return; }
+    setCouponBusy(true);
+    try {
+      const r = await api.post('/coupons/validate', { code: c, items: cartItems() });
+      setApplied({ code: r.data.code, discount: r.data.discount });
+      setCouponInput('');
+      toast.success(`Coupon ${r.data.code} applied — you save ₹${r.data.discount}!`);
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Invalid coupon');
+    } finally { setCouponBusy(false); }
+  };
+
   const loadRazorpay = () => new Promise((resolve, reject) => {
     if (typeof window !== 'undefined' && window.Razorpay) return resolve(true);
     const s = document.createElement('script');
@@ -145,10 +176,11 @@ export default function Checkout() {
 
   const placeOrder = async (method, payId) => {
     const orderRes = await api.post('/orders', {
-      items: cart.map(c=> ({ product: c.product, quantity: c.quantity })),
+      items: cartItems(),
       shippingAddress: form,
       paymentMethod: method,
       paymentId: payId,
+      couponCode: applied?.code || '',
     });
     clearCart();
     toast.success('Order placed!');
@@ -161,7 +193,8 @@ export default function Checkout() {
   const payOnlineWithRazorpay = async () => {
     await loadRazorpay();
     const { data } = await api.post('/orders/payment/razorpay/order', {
-      items: cart.map(c=> ({ product: c.product, quantity: c.quantity })),
+      items: cartItems(),
+      couponCode: applied?.code || '',
     });
     return new Promise((resolve, reject) => {
       const rzp = new window.Razorpay({
@@ -262,6 +295,35 @@ export default function Checkout() {
           </div>
 
           <div className="border-t pt-6 mt-6">
+            <div className="font-bold mb-3">Discount Coupon</div>
+            {applied ? (
+              <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-green-200 bg-green-50 px-4 py-3">
+                <span className="text-sm font-bold text-green-800">🎟 {applied.code} — you save ₹{applied.discount}</span>
+                <button type="button" onClick={() => setApplied(null)} className="ml-auto text-xs font-bold text-red-600 hover:underline">Remove</button>
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-2">
+                  <input value={couponInput} onChange={e=>setCouponInput(e.target.value.toUpperCase())} placeholder="Enter coupon code" className="flex-1 min-w-0 border border-gray-200 rounded-xl px-4 py-3 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                  <button type="button" disabled={couponBusy} onClick={() => applyCoupon()} className="shrink-0 bg-sacred-deepmaroon text-white rounded-xl px-6 text-sm font-bold disabled:opacity-50">{couponBusy ? '…' : 'Apply'}</button>
+                </div>
+                {suggest.length > 0 && (
+                  <div className="mt-3">
+                    <div className="text-xs font-bold text-green-700 mb-2">🎉 You qualify for {suggest.length} coupon{suggest.length === 1 ? '' : 's'} — tap to apply:</div>
+                    <div className="flex flex-wrap gap-2">
+                      {suggest.map(s => (
+                        <button key={s.code} type="button" disabled={couponBusy} onClick={() => applyCoupon(s.code)} className="text-xs font-bold border-2 border-dashed border-green-300 bg-green-50 text-green-800 rounded-xl px-3.5 py-2 hover:border-green-500 transition">
+                          {s.code} · save ₹{s.discount}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="border-t pt-6 mt-6">
             <div className="font-bold mb-3">Payment Method</div>
             <div className="grid grid-cols-2 gap-3">
               <label className={`border-2 rounded-2xl p-4 cursor-pointer flex items-center gap-3 ${paymentMethod==='online'?'border-primary bg-primary/5':'border-gray-100'}`}>
@@ -279,7 +341,7 @@ export default function Checkout() {
           </div>
 
           <button disabled={loading} className="w-full bg-primary text-white rounded-full py-4 font-bold text-lg hover:bg-primary-dark disabled:opacity-60 mt-6 flex items-center justify-center gap-2">
-            {loading ? <ButtonLoader /> : `Pay ₹${total} & Confirm Order →`}
+            {loading ? <ButtonLoader /> : `Pay ₹${payable} & Confirm Order →`}
           </button>
           <div className="text-xs text-center text-gray-400">Shipping: {shipping===0?'FREE':`₹${shipping}`} • {subtotal<300? `Add ₹${300-subtotal} more for free shipping` : 'You got free shipping!'}</div>
         </form>
@@ -298,8 +360,9 @@ export default function Checkout() {
         </div>
         <div className="border-t mt-4 pt-4 space-y-2 text-sm">
           <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span className="font-semibold">₹{subtotal}</span></div>
+          {applied && <div className="flex justify-between"><span className="text-green-700">Coupon {applied.code}</span><span className="font-semibold text-green-700">−₹{applied.discount}</span></div>}
           <div className="flex justify-between"><span className="text-gray-500">Shipping</span><span className={`font-semibold ${shipping===0?'text-green-600':''}`}>{shipping===0?'FREE':`₹${shipping}`}</span></div>
-          <div className="flex justify-between text-[16px] font-bold border-t pt-2"><span>Total</span><span className="text-primary text-xl">₹{total}</span></div>
+          <div className="flex justify-between text-[16px] font-bold border-t pt-2"><span>Total</span><span className="text-primary text-xl">₹{payable}</span></div>
         </div>
         <div className="mt-4 bg-accent/5 border border-accent/20 rounded-xl p-3 text-xs text-accent-dark flex items-start gap-2"><IconLock className="w-4 h-4 shrink-0 mt-px" /><span>Secure payment • Admin notified by email instantly • Order confirmed after payment</span></div>
       </div>
