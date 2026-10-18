@@ -9,7 +9,9 @@ import {
   IconChart, IconBox, IconGrid, IconFlame, IconUsers, IconImage,
   IconAlert, IconTruck, IconCheckCircle, IconCash, IconStore,
   IconCloud, IconSearch, IconDownload, IconPhone, IconCopy, IconClock, IconTag,
+  IconStar, IconTrash, IconXCircle,
 } from '@/components/icons';
+import { Stars } from '@/components/Stars';
 
 /* ------------------------------------------------------------------ */
 /*  Shared helpers                                                     */
@@ -125,6 +127,8 @@ export default function AdminPage() {
   const [users, setUsers] = useState([]);
   const [banners, setBanners] = useState([]);
   const [coupons, setCoupons] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [reviewCounts, setReviewCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
   const [loading, setLoading] = useState(true);
 
   const fetchOrders = async (range) => {
@@ -148,6 +152,10 @@ export default function AdminPage() {
       api.get('/admin/users').then(r => setUsers(r.data || [])).catch(() => {}),
       api.get('/banners/all').then(r => setBanners(r.data || [])).catch(() => {}),
       api.get('/coupons').then(r => setCoupons(r.data || [])).catch(() => {}),
+      api.get('/reviews/admin/all').then(r => {
+        setReviews(r.data?.reviews || []);
+        setReviewCounts(r.data?.summary || { pending: 0, approved: 0, rejected: 0 });
+      }).catch(() => {}),
     ];
     await Promise.all(jobs);
     setLoading(false);
@@ -170,6 +178,17 @@ export default function AdminPage() {
     try { const r = await api.get('/banners/all'); setBanners(r.data || []); } catch {}
   };
 
+  const reloadReviews = async () => {
+    try {
+      const r = await api.get('/reviews/admin/all');
+      setReviews(r.data?.reviews || []);
+      setReviewCounts(r.data?.summary || { pending: 0, approved: 0, rejected: 0 });
+    } catch {}
+    // A review change moves the product's public rating, so refresh the
+    // catalogue too — otherwise the admin list would show a stale star value.
+    try { const r = await api.get('/products/admin/all'); setProducts(r.data || []); } catch {}
+  };
+
   if (!user) return <div className="p-10 text-center">Please login as admin — <Link href="/login" className="text-primary font-bold">Login</Link></div>;
   if (!isAdmin) return <div className="p-10 text-center">Access denied — admin only. Current user: {user.email}</div>;
 
@@ -180,6 +199,7 @@ export default function AdminPage() {
     { id: 'categories', label: 'Categories', icon: IconGrid, desc: 'Homepage & menu' },
     { id: 'products', label: 'Products', icon: IconFlame, desc: 'Catalogue & stock' },
     { id: 'coupons', label: 'Coupons', icon: IconTag, desc: 'Discount codes' },
+    { id: 'reviews', label: 'Reviews', icon: IconStar, desc: 'Approve customer reviews' },
     { id: 'users', label: 'Users', icon: IconUsers, desc: 'Registered customers' },
   ];
 
@@ -247,6 +267,7 @@ export default function AdminPage() {
                   <span className={`hidden lg:block text-[10px] font-normal ${tab === n.id ? 'text-white/60' : 'text-stone-400'}`}>{n.desc}</span>
                 </span>
                 {n.id === 'orders' && <span className={`lg:ml-auto text-[11px] px-2 py-0.5 rounded-full ${tab === n.id ? 'bg-sacred-diya text-sacred-deepmaroon' : 'bg-sacred-maroon text-white'}`}>{orders.length}</span>}
+                {n.id === 'reviews' && reviewCounts.pending > 0 && <span className={`lg:ml-auto text-[11px] px-2 py-0.5 rounded-full animate-pulse ${tab === n.id ? 'bg-sacred-diya text-sacred-deepmaroon' : 'bg-sacred-diya text-sacred-deepmaroon'}`}>{reviewCounts.pending}</span>}
               </button>
             ))}
           </div>
@@ -268,6 +289,7 @@ export default function AdminPage() {
           {!loading && tab === 'products' && <ProductsTab categories={categories} products={products} onChanged={loadAll} />}
           {!loading && tab === 'users' && <UsersTab users={users} />}
           {!loading && tab === 'coupons' && <CouponsTab coupons={coupons} products={products} onChanged={loadAll} />}
+          {!loading && tab === 'reviews' && <ReviewsTab reviews={reviews} counts={reviewCounts} onChanged={reloadReviews} />}
         </div>
       </div>
     </div>
@@ -1648,6 +1670,180 @@ function UsersTab({ users }) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+/* ------------------------------------------------------------------ */
+/*  Reviews moderation                                                 */
+/* ------------------------------------------------------------------ */
+
+const REVIEW_STATUS_META = {
+  pending: { label: 'Pending', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+  approved: { label: 'Published', cls: 'bg-green-50 text-green-700 border-green-200' },
+  rejected: { label: 'Rejected', cls: 'bg-red-50 text-red-700 border-red-200' },
+};
+
+function ReviewsTab({ reviews, counts, onChanged }) {
+  const [filter, setFilter] = useState('pending');
+  const [busyId, setBusyId] = useState(null);
+
+  // Hooks first, early return after — the React error #300 rule.
+  const visible = filter === 'all' ? reviews : reviews.filter((r) => r.status === filter);
+
+  const setStatus = async (id, status) => {
+    setBusyId(id);
+    try {
+      await api.patch(`/reviews/${id}/status`, { status });
+      toast.success(
+        status === 'approved' ? 'Review published' : status === 'rejected' ? 'Review rejected' : 'Review moved back to pending'
+      );
+      await onChanged?.();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Could not update review');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const remove = async (id) => {
+    if (!confirm('Delete this review permanently? This cannot be undone.')) return;
+    setBusyId(id);
+    try {
+      await api.delete(`/reviews/${id}`);
+      toast.success('Review deleted');
+      await onChanged?.();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Could not delete review');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const FILTERS = [
+    { id: 'pending', label: 'Pending', n: counts.pending },
+    { id: 'approved', label: 'Published', n: counts.approved },
+    { id: 'rejected', label: 'Rejected', n: counts.rejected },
+    { id: 'all', label: 'All', n: (counts.pending || 0) + (counts.approved || 0) + (counts.rejected || 0) },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="spiritual-card rounded-3xl p-5">
+        <div className="font-sacred text-xl text-sacred-deepmaroon">Customer Reviews</div>
+        <p className="text-xs text-stone-500 mt-1">
+          Only approved reviews are visible on the storefront. Approving or rejecting a review
+          recalculates the product&rsquo;s public rating straight away.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {FILTERS.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => setFilter(f.id)}
+            className={`text-xs font-bold px-4 py-2 rounded-full border transition ${
+              filter === f.id
+                ? 'bg-sacred-maroon text-white border-sacred-maroon'
+                : 'bg-white text-stone-600 border-stone-200 hover:border-sacred-saffron'
+            }`}
+          >
+            {f.label} ({f.n || 0})
+          </button>
+        ))}
+      </div>
+
+      {visible.length === 0 ? (
+        <div className="bg-white rounded-3xl border border-stone-200/70 p-12 text-center">
+          <div className="w-12 h-12 mx-auto rounded-full bg-smoke-100 flex items-center justify-center text-stone-400">
+            <IconStar className="w-6 h-6" />
+          </div>
+          <div className="font-bold mt-3">Nothing here</div>
+          <p className="text-sm text-stone-500 mt-1">No {filter === 'all' ? '' : filter} reviews right now.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {visible.map((r) => {
+            const meta = REVIEW_STATUS_META[r.status] || REVIEW_STATUS_META.pending;
+            const busy = busyId === r._id;
+            return (
+              <div key={r._id} className="bg-white rounded-3xl border border-stone-200/70 p-5">
+                <div className="flex flex-wrap items-start gap-4">
+                  {/* product */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {r.product?.images?.[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.product.images[0]} alt="" className="w-12 h-12 rounded-xl object-contain border shrink-0" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-smoke-100 border shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <Link
+                        href={`/product/${r.product?.slug}`}
+                        className="font-bold text-sm hover:text-sacred-maroon line-clamp-1"
+                      >
+                        {r.product?.name || 'Deleted product'}
+                      </Link>
+                      <div className="text-xs text-stone-500 mt-0.5">
+                        {r.user?.name || r.authorName} · {fmtDate(r.createdAt)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Stars value={r.rating} className="text-sacred-saffron" />
+                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${meta.cls}`}>
+                      {meta.label}
+                    </span>
+                  </div>
+                </div>
+
+                {r.title && <div className="font-semibold text-sm mt-3 break-words">{r.title}</div>}
+                <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap break-words">{r.comment}</p>
+                {r.isVerifiedPurchase && (
+                  <div className="text-[11px] text-green-700 font-semibold mt-2">✓ Verified purchase</div>
+                )}
+
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {r.status !== 'approved' && (
+                    <button
+                      onClick={() => setStatus(r._id, 'approved')}
+                      disabled={busy}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
+                    >
+                      <IconCheckCircle className="w-3.5 h-3.5" /> Approve &amp; publish
+                    </button>
+                  )}
+                  {r.status !== 'rejected' && (
+                    <button
+                      onClick={() => setStatus(r._id, 'rejected')}
+                      disabled={busy}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full border border-red-200 text-red-600 hover:bg-red-50 transition disabled:opacity-50"
+                    >
+                      <IconXCircle className="w-3.5 h-3.5" /> Reject
+                    </button>
+                  )}
+                  {r.status !== 'pending' && (
+                    <button
+                      onClick={() => setStatus(r._id, 'pending')}
+                      disabled={busy}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full border border-amber-200 text-amber-700 hover:bg-amber-50 transition disabled:opacity-50"
+                    >
+                      <IconClock className="w-3.5 h-3.5" /> Move to pending
+                    </button>
+                  )}
+                  <button
+                    onClick={() => remove(r._id)}
+                    disabled={busy}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full border border-stone-200 text-stone-500 hover:bg-stone-50 hover:text-red-600 transition disabled:opacity-50"
+                  >
+                    <IconTrash className="w-3.5 h-3.5" /> Delete
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

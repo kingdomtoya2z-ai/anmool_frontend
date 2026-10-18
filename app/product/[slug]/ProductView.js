@@ -6,13 +6,14 @@ import DOMPurify from 'isomorphic-dompurify';
 import { useCart } from '@/lib/cartContext';
 import { useAuth } from '@/lib/authContext';
 import ProductCard from '@/components/ProductCard';
+import ProductReviews from '@/components/ProductReviews';
+import { Stars } from '@/components/Stars';
 import SmartImage from '@/components/SmartImage';
 import Loader from '@/components/Loader';
 import Link from 'next/link';
 import {
   IconCheck,
   IconLock,
-  IconStar,
   IconSupport,
   IconTruck,
   IconXCircle,
@@ -106,8 +107,8 @@ export default function ProductPage() {
           <div className="text-xs font-bold tracking-widest text-primary">{product.category?.name?.toUpperCase()} {product.unit ? `• ${product.unit}` : ''}</div>
           <h1 className="text-2xl md:text-3xl font-serif font-bold mt-2 leading-tight">{product.name}</h1>
           <div className="flex items-center gap-2 mt-3">
-            <span className="flex items-center gap-0.5 text-accent">{[1,2,3,4,5].map(i => <IconStar key={i} className="w-3.5 h-3.5" />)}</span><span className="text-sm font-bold">{product.rating}</span>
-            {product.reviewsCount > 0 && <span className="text-xs text-gray-400">({product.reviewsCount} reviews)</span>}
+            <Stars value={product.rating} className="text-sacred-saffron" /><span className="text-sm font-bold">{Number(product.rating || 0).toFixed(1)}</span>
+            {product.reviewsCount > 0 && <a href="#reviews" className="text-xs text-gray-400 hover:text-primary underline underline-offset-2">({product.reviewsCount} review{product.reviewsCount === 1 ? '' : 's'})</a>}
             {product.stock > 0 ? (
               <span className="ml-2 inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded-full"><IconCheck className="w-3 h-3" /> In Stock: {product.stock}</span>
             ) : (
@@ -163,6 +164,8 @@ export default function ProductPage() {
           <div className="text-xs text-gray-500 mt-4">SKU: {product.sku || '—'} • Category: <Link href={`/category/${product.category?.slug}`} className="text-primary font-semibold">{product.category?.name}</Link></div>
         </div>
       </div>
+
+      <ProductReviews productId={product._id} productName={product.name} />
 
       {related.length>0 && (
         <div className="mt-10">
