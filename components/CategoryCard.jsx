@@ -22,7 +22,7 @@ export default function CategoryCard({ category, variant = 'large' }) {
         <SmartImage
           src={category.image}
           alt={category.name}
-          className="w-full h-full object-contain"
+          className="w-full h-full object-cover"
         />
       </div>
       <h3 className="font-sacred text-xs sm:text-sm lg:text-[15px] leading-tight text-sacred-deepmaroon group-hover:text-sacred-maroon transition mt-2 line-clamp-2">
