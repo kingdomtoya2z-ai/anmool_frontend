@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import PageHero from '@/components/PageHero';
+import { SHIPPING_THRESHOLD, SHIPPING_CHARGE } from '@/lib/shipping';
 
 export const metadata = {
   title: 'Shipping Policy — Anmool Dairy',
@@ -17,7 +18,7 @@ const BLOCKS = [
   },
   {
     h: 'Shipping charges',
-    p: 'Shipping is FREE on orders above ₹300. A flat ₹100 shipping applies below that. Charges, if any, are always shown clearly before you pay.',
+    p: `Shipping is FREE on orders above ₹${SHIPPING_THRESHOLD}. A flat ₹${SHIPPING_CHARGE} shipping applies below that. Charges, if any, are always shown clearly before you pay.`,
   },
   {
     h: 'Packing',

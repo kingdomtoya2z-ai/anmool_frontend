@@ -8,6 +8,7 @@ import Link from 'next/link';
 import PageHero from '@/components/PageHero';
 import SmartImage from '@/components/SmartImage';
 import { IconBox } from '@/components/icons';
+import { SHIPPING_THRESHOLD } from '@/lib/shipping';
 
 export default function CategoryPage() {
   const { slug } = useParams();
@@ -57,7 +58,7 @@ export default function CategoryPage() {
         breadcrumb={breadcrumb}
         meta={
           <span className="inline-block text-xs bg-white/15 border border-white/20 rounded-full px-3 py-1.5">
-            {products.length} Product{products.length === 1 ? '' : 's'} • Free shipping above ₹300
+            {products.length} Product{products.length === 1 ? '' : 's'} • Free shipping above ₹{SHIPPING_THRESHOLD}
           </span>
         }
         actions={

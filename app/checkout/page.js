@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { ButtonLoader } from '@/components/Loader';
+import { SHIPPING_THRESHOLD } from '@/lib/shipping';
 import SmartImage from '@/components/SmartImage';
 import {
   IconCard,
@@ -327,7 +328,7 @@ export default function Checkout() {
       <div className="md:col-span-2 min-w-0 bg-white rounded-3xl border border-gray-100 p-4 sm:p-6 md:p-8">
         <h1 className="text-2xl font-serif font-bold">Checkout</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Free shipping on orders above ₹300 — Pay securely
+          Free shipping on orders above ₹{SHIPPING_THRESHOLD} — Pay securely
         </p>
 
         {user?.address?.address ? (
@@ -564,8 +565,8 @@ export default function Checkout() {
           </button>
           <div className="text-xs text-center text-gray-400 break-words">
             Shipping: {shipping === 0 ? 'FREE' : `₹${shipping}`} •{' '}
-            {subtotal < 300
-              ? `Add ₹${300 - subtotal} more for free shipping`
+            {subtotal < SHIPPING_THRESHOLD
+              ? `Add ₹${SHIPPING_THRESHOLD - subtotal} more for free shipping`
               : 'You got free shipping!'}
           </div>
         </form>

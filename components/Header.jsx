@@ -7,6 +7,7 @@ import api from '@/lib/api';
 import { useRouter, usePathname } from 'next/navigation';
 import { IconFlame, IconHome, IconPin, IconCart, IconArrowRight, IconLogout } from '@/components/icons';
 import BhajanButton from '@/components/BhajanButton';
+import { SHIPPING_THRESHOLD } from '@/lib/shipping';
 
 function Avatar({ user, size = 'md' }) {
   const cls = size === 'lg' ? 'w-10 h-10 text-lg' : 'w-8 h-8 text-sm';
@@ -166,7 +167,7 @@ export default function Header() {
           </span>
           <span className="mx-auto md:mx-0 flex items-center gap-2">
             <IconFlame className="w-4 h-4 text-sacred-diya animate-flicker" />
-            <span className="font-semibold">Free Delivery above Rs.300/-</span>
+            <span className="font-semibold">Free Delivery above Rs.{SHIPPING_THRESHOLD}/-</span>
             <span className="hidden md:inline opacity-70">| Shuddh • Pavitra • Vishwas</span>
             <BhajanButton />
           </span>

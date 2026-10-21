@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/authContext';
 import { useRouter } from 'next/navigation';
 import SmartImage from '@/components/SmartImage';
 import { IconCart, IconCheckCircle, IconLock } from '@/components/icons';
+import { SHIPPING_THRESHOLD } from '@/lib/shipping';
 
 export default function CartPage() {
   const { cart, hydrated, updateQty, removeFromCart, subtotal, shipping, total } = useCart();
@@ -17,7 +18,7 @@ export default function CartPage() {
         <div className="bg-white rounded-3xl border border-gray-100 p-10">
           <div className="w-16 h-16 mx-auto rounded-full bg-cream border border-accent/20 flex items-center justify-center text-primary mb-4"><IconCart className="w-7 h-7" /></div>
           <h2 className="text-2xl font-serif font-bold">Your cart is empty</h2>
-          <p className="text-sm text-gray-500 mt-2">Add products to get free shipping above ₹300</p>
+          <p className="text-sm text-gray-500 mt-2">Add products to get free shipping above ₹{SHIPPING_THRESHOLD}</p>
           <Link href="/" className="inline-block mt-6 bg-primary text-white px-8 py-3 rounded-full font-bold">Continue Shopping →</Link>
         </div>
       </div>
@@ -58,8 +59,8 @@ export default function CartPage() {
         <div className="space-y-3 mt-4 text-sm">
           <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span className="font-semibold">₹{subtotal}</span></div>
           <div className="flex justify-between"><span className="text-gray-500">Shipping</span><span className={`font-semibold ${shipping===0?'text-green-600':''}`}>{shipping===0 ? 'FREE' : `₹${shipping}`}</span></div>
-          {subtotal<300 && subtotal>0 && <div className="text-xs bg-accent/5 border border-accent/20 rounded-xl p-3 text-accent-dark">Add ₹{300-subtotal} more for <b>FREE shipping</b>!</div>}
-          {subtotal>=300 && <div className="text-xs bg-green-50 border border-green-200 rounded-xl p-3 text-green-700 flex items-center gap-1.5"><IconCheckCircle className="w-4 h-4 shrink-0" /> You got FREE shipping!</div>}
+          {subtotal < SHIPPING_THRESHOLD && subtotal > 0 && <div className="text-xs bg-accent/5 border border-accent/20 rounded-xl p-3 text-accent-dark">Add ₹{SHIPPING_THRESHOLD - subtotal} more for <b>FREE shipping</b>!</div>}
+          {subtotal >= SHIPPING_THRESHOLD && <div className="text-xs bg-green-50 border border-green-200 rounded-xl p-3 text-green-700 flex items-center gap-1.5"><IconCheckCircle className="w-4 h-4 shrink-0" /> You got FREE shipping!</div>}
           <div className="border-t pt-3 flex justify-between text-[16px] font-bold"><span>Total</span><span className="text-primary text-xl">₹{total}</span></div>
           <div className="text-xs text-gray-400">Inclusive of all taxes</div>
         </div>

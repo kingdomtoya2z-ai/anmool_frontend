@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/authContext';
 import ProductCard from '@/components/ProductCard';
 import ProductReviews from '@/components/ProductReviews';
 import { Stars } from '@/components/Stars';
+import { SHIPPING_THRESHOLD, SHIPPING_CHARGE } from '@/lib/shipping';
 import SmartImage from '@/components/SmartImage';
 import Loader from '@/components/Loader';
 import Link from 'next/link';
@@ -121,7 +122,7 @@ export default function ProductPage() {
             {product.comparePrice && <span className="text-lg line-through text-gray-400">₹{product.comparePrice}</span>}
             {product.weight && <span className="text-sm text-gray-500">• {product.weight}</span>}
           </div>
-          <div className="text-xs text-gray-500 mt-1">Inclusive of all taxes • Shipping: Free above ₹300, else ₹100</div>
+          <div className="text-xs text-gray-500 mt-1">Inclusive of all taxes • Shipping: Free above ₹{SHIPPING_THRESHOLD}, else ₹{SHIPPING_CHARGE}</div>
 
           <div className="html-desc text-sm text-gray-600 leading-relaxed mt-6 border-t pt-6" dangerouslySetInnerHTML={{ __html: cleanDescription }} />
 
