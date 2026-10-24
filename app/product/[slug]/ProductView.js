@@ -27,7 +27,7 @@ export default function ProductPage() {
   const { user } = useAuth();
   const [product, setProduct] = useState(null);
   const [related, setRelated] = useState([]);
-  const [qty, setQty] = useState(1);
+  const [imgIdx, setImgIdx] = useState(0);
   const [descExpanded, setDescExpanded] = useState(false);
 
   const cleanDescription = useMemo(
