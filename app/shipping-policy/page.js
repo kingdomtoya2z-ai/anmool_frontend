@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import PageHero from '@/components/PageHero';
-import { SHIPPING_THRESHOLD, SHIPPING_CHARGE } from '@/lib/shipping';
+import { SHIPPING_THRESHOLD, LIGHT_ITEM_SHIPPING, HEAVY_ITEM_SHIPPING } from '@/lib/shipping';
 
 export const metadata = {
   title: 'Shipping Policy — Anmool Dairy',
@@ -18,7 +18,7 @@ const BLOCKS = [
   },
   {
     h: 'Shipping charges',
-    p: `Shipping is FREE on orders above ₹${SHIPPING_THRESHOLD}. A flat ₹${SHIPPING_CHARGE} shipping applies below that. Charges, if any, are always shown clearly before you pay.`,
+    p: `Shipping is FREE on orders of ₹${SHIPPING_THRESHOLD} or more. Below that, each item is charged by weight: ₹${LIGHT_ITEM_SHIPPING} for items under 1kg and ₹${HEAVY_ITEM_SHIPPING} for items 1kg and above. Charges, if any, are always shown clearly before you pay.`,
   },
   {
     h: 'Packing',

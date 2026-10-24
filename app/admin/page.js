@@ -1359,7 +1359,7 @@ function ProductsTab({ categories, products, onChanged }) {
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Weight">
+              <Field label="Weight (e.g. 500g / 1kg)">
                 <input value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} placeholder="500g" className={inputCls} />
               </Field>
               <Field label="Unit">

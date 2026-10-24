@@ -5,7 +5,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import PageHero from '@/components/PageHero';
 import { IconMail, IconPhone, IconPin, IconArrowRight, IconCheckCircle, IconBox } from '@/components/icons';
-import { SHIPPING_THRESHOLD, SHIPPING_CHARGE } from '@/lib/shipping';
+import { SHIPPING_THRESHOLD, LIGHT_ITEM_SHIPPING, HEAVY_ITEM_SHIPPING } from '@/lib/shipping';
 
 const CHANNELS = [
   {
@@ -41,7 +41,7 @@ const CHANNELS = [
 const FAQS = [
   { q: 'How do I track my order?', a: 'Every order gets an Order ID (e.g. ANM-000123) at checkout. Enter it on the Track Order page — no login needed. You can also watch live status from Account → My Orders.' },
   { q: 'Do I need an account to order?', a: 'Yes. Only logged-in customers can place orders — it keeps your parcels secure. Register with your name, email and 10-digit mobile number in under a minute.' },
-  { q: 'What are the shipping charges?', a: `Shipping is FREE on orders above ₹${SHIPPING_THRESHOLD}, and a flat ₹${SHIPPING_CHARGE} below that. Delivery timelines depend on your pincode and are confirmed on your order.` },
+  { q: 'What are the shipping charges?', a: `Shipping is FREE on orders of ₹${SHIPPING_THRESHOLD} or more. Below that, each item is charged by weight: ₹${LIGHT_ITEM_SHIPPING} for items under 1kg and ₹${HEAVY_ITEM_SHIPPING} for items 1kg and above. Delivery timelines depend on your pincode and are confirmed on your order.` },
   { q: 'Do you take bulk or festive orders?', a: 'Yes — for weddings, festivals, temples or resale, choose “Bulk / festive order” in the form or WhatsApp us directly with quantities.' },
 ];
 
