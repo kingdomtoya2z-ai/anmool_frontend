@@ -8,14 +8,7 @@ import Link from 'next/link';
 import { ButtonLoader } from '@/components/Loader';
 import { SHIPPING_THRESHOLD } from '@/lib/shipping';
 import SmartImage from '@/components/SmartImage';
-import {
-  IconCard,
-  IconCash,
-  IconCheckCircle,
-  IconCopy,
-  IconLock,
-  IconPin,
-} from '@/components/icons';
+import { IconCard, IconCheckCircle, IconCopy, IconLock, IconPin } from '@/components/icons';
 
 const EMPTY_FORM = { fullName: '', phone: '', address: '', city: '', state: '', pincode: '' };
 
@@ -23,11 +16,10 @@ const inputCls =
   'w-full min-w-0 mt-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20';
 
 export default function Checkout() {
-  const { cart, hydrated, subtotal, shipping, total, clearCart } = useCart();
+  const { cart, hydrated, subtotal, shipping, total, clearCart, updateQty, removeFromCart } = useCart();
   const { user } = useAuth();
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('online');
   const [placed, setPlaced] = useState(null);
   const [couponInput, setCouponInput] = useState('');
   const [applied, setApplied] = useState(null); // { code, discount }
@@ -97,7 +89,6 @@ export default function Checkout() {
     setCouponInput('');
     setSuggest([]);
     setCouponBusy(false);
-    setPaymentMethod('online');
   }, [user]);
 
   const payable = Math.max(0, total - (applied?.discount || 0));
@@ -201,13 +192,17 @@ export default function Checkout() {
       toast.error('Enter valid 6-digit pincode');
       return;
     }
+    if (!form.fullName.trim() || !form.address.trim() || !form.city.trim() || !form.state.trim()) {
+      toast.error('Fill all shipping details');
+      return;
+    }
+    if (cart.length === 0) {
+      toast.error('Your cart is empty');
+      return;
+    }
     setLoading(true);
     try {
-      if (paymentMethod === 'cod') {
-        await placeOrder('cod', 'COD');
-      } else {
-        await payOnlineWithRazorpay();
-      }
+      await payOnlineWithRazorpay();
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || 'Order failed');
     } finally {
@@ -243,14 +238,8 @@ export default function Checkout() {
           <div className="w-20 h-20 mx-auto rounded-full bg-green-50 border border-green-200 flex items-center justify-center text-green-600">
             <IconCheckCircle className="w-9 h-9" />
           </div>
-          <h1 className="text-2xl font-bold mt-5 break-words">
-            {placed.paymentMethod === 'cod' ? 'Order Placed!' : 'Payment Successful!'}
-          </h1>
-          <p className="text-sm text-gray-500 mt-2">
-            {placed.paymentMethod === 'cod'
-              ? 'Your COD order is placed. Our team will confirm it shortly.'
-              : 'Your order is confirmed and being processed.'}
-          </p>
+          <h1 className="text-2xl font-bold mt-5 break-words">Payment Successful!</h1>
+          <p className="text-sm text-gray-500 mt-2">Your order is confirmed and being processed.</p>
           <div className="mt-6 bg-cream border border-accent/20 rounded-2xl p-4 sm:p-5">
             <div className="text-[11px] font-bold tracking-[0.2em] text-primary">
               YOUR ORDER ID
@@ -501,60 +490,17 @@ export default function Checkout() {
 
           <div className="border-t pt-6 mt-6">
             <div className="font-bold mb-3">Payment Method</div>
-            {/* Stacks on phones — two columns of long copy used to push the
-                page wider than the viewport. */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label
-                className={`min-w-0 border-2 rounded-2xl p-4 cursor-pointer flex items-center gap-3 ${
-                  paymentMethod === 'online'
-                    ? 'border-primary bg-primary/5'
-                    : 'border-gray-100'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="online"
-                  checked={paymentMethod === 'online'}
-                  onChange={() => setPaymentMethod('online')}
-                  className="accent-primary shrink-0"
-                />
-                <div className="min-w-0">
-                  <div className="font-bold text-sm">Pay Online</div>
-                  <div className="text-xs text-gray-500">
-                    UPI / Card / Netbanking via Razorpay
-                  </div>
-                </div>
-                <span className="ml-auto text-primary shrink-0">
-                  <IconCard className="w-5 h-5" />
-                </span>
-              </label>
-              <label
-                className={`min-w-0 border-2 rounded-2xl p-4 cursor-pointer flex items-center gap-3 ${
-                  paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'border-gray-100'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="cod"
-                  checked={paymentMethod === 'cod'}
-                  onChange={() => setPaymentMethod('cod')}
-                  className="accent-primary shrink-0"
-                />
-                <div className="min-w-0">
-                  <div className="font-bold text-sm">Cash on Delivery</div>
-                  <div className="text-xs text-gray-500">Pay on delivery</div>
-                </div>
-                <span className="ml-auto text-primary shrink-0">
-                  <IconCash className="w-5 h-5" />
-                </span>
-              </label>
+            <div className="rounded-2xl border-2 border-primary bg-primary/5 p-4 flex items-center gap-3">
+              <input type="radio" name="paymentMethod" value="online" checked readOnly className="accent-primary shrink-0" />
+              <div className="min-w-0">
+                <div className="font-bold text-sm">Pay Online</div>
+                <div className="text-xs text-gray-500">UPI / Card / Netbanking via Razorpay</div>
+              </div>
+              <span className="ml-auto text-primary shrink-0">
+                <IconCard className="w-5 h-5" />
+              </span>
             </div>
-            <div className="text-xs text-gray-500 mt-2">
-              Order will be confirmed once payment is successful. Admin gets
-              email notification instantly.
-            </div>
+            <div className="text-xs text-gray-500 mt-2">Order will be confirmed once payment is successful.</div>
           </div>
 
           <button
@@ -574,7 +520,7 @@ export default function Checkout() {
 
       <div className="min-w-0 bg-white rounded-3xl border border-gray-100 p-4 sm:p-6 h-fit md:sticky md:top-24">
         <h3 className="font-bold">Your Order</h3>
-        <div className="space-y-3 mt-4 max-h-[300px] overflow-auto pr-1">
+        <div className="space-y-3 mt-4 max-h-[360px] overflow-auto pr-1">
           {cart.map((item) => (
             <div key={item.product} className="flex gap-3 text-sm">
               <SmartImage
@@ -584,8 +530,28 @@ export default function Checkout() {
               />
               <div className="flex-1 min-w-0">
                 <div className="font-medium line-clamp-2 break-words">{item.name}</div>
-                <div className="text-xs text-gray-500">
-                  Qty: {item.quantity} × ₹{item.price}
+                <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                  <div className="flex items-center border rounded-full">
+                    <button
+                      type="button"
+                      onClick={() => updateQty(item.product, item.quantity - 1)}
+                      className="w-6 h-6 flex items-center justify-center hover:bg-gray-50 rounded-l-full"
+                    >
+                      −
+                    </button>
+                    <span className="w-6 text-center text-xs font-semibold">{item.quantity}</span>
+                    <button
+                      type="button"
+                      onClick={() => updateQty(item.product, item.quantity + 1)}
+                      className="w-6 h-6 flex items-center justify-center hover:bg-gray-50 rounded-r-full"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <span className="text-xs text-gray-400">× ₹{item.price}</span>
+                  <button type="button" onClick={() => removeFromCart(item.product)} className="text-xs text-red-500 hover:underline ml-auto">
+                    Remove
+                  </button>
                 </div>
               </div>
               <div className="font-bold shrink-0">₹{item.price * item.quantity}</div>

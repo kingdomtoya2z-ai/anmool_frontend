@@ -487,8 +487,7 @@ function OrdersTab({ orders, reload }) {
     let list = [...orders];
     if (statusFilter !== 'all') list = list.filter(o => o.orderStatus === statusFilter);
     if (payFilter !== 'all') {
-      if (payFilter === 'cod') list = list.filter(o => o.paymentMethod === 'cod');
-      else if (payFilter === 'online') list = list.filter(o => o.paymentMethod !== 'cod');
+      if (payFilter === 'online') list = list.filter(o => o.paymentMethod !== 'cod');
       else list = list.filter(o => o.paymentStatus === payFilter);
     }
     if (dateFilter !== 'all') {
@@ -645,7 +644,6 @@ function OrdersTab({ orders, reload }) {
             className="w-full min-w-0 border border-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
           <select value={payFilter} onChange={e => setPayFilter(e.target.value)} className="w-full min-w-0 border border-gray-200 rounded-full px-4 py-2 text-sm bg-white">
             <option value="all">All payments</option>
-            <option value="cod">COD orders</option>
             <option value="online">Online orders</option>
             <option value="paid">Paid</option>
             <option value="pending">Payment pending</option>

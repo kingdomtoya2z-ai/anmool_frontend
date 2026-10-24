@@ -28,7 +28,7 @@ export default function ProductPage() {
   const [product, setProduct] = useState(null);
   const [related, setRelated] = useState([]);
   const [qty, setQty] = useState(1);
-  const [imgIdx, setImgIdx] = useState(0);
+  const [descExpanded, setDescExpanded] = useState(false);
 
   const cleanDescription = useMemo(
     () => DOMPurify.sanitize(product?.description || ''),
@@ -124,7 +124,23 @@ export default function ProductPage() {
           </div>
           <div className="text-xs text-gray-500 mt-1">Inclusive of all taxes • Shipping: Free above ₹{SHIPPING_THRESHOLD}, else ₹{LIGHT_ITEM_SHIPPING} (under 1kg) / ₹{HEAVY_ITEM_SHIPPING} (1kg+)</div>
 
-          <div className="html-desc text-sm text-gray-600 leading-relaxed mt-6 border-t pt-6" dangerouslySetInnerHTML={{ __html: cleanDescription }} />
+          <div className="html-desc text-sm text-gray-600 leading-relaxed mt-6 border-t pt-6">
+            <div
+              className={`${descExpanded ? '' : 'max-h-[220px] overflow-hidden relative'} [&_p]:mb-3 last:[&_p]:mb-0`}
+              dangerouslySetInnerHTML={{ __html: cleanDescription }}
+            />
+            {cleanDescription && !descExpanded && (
+              <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+            )}
+            {cleanDescription && (
+              <button
+                onClick={() => setDescExpanded((v) => !v)}
+                className="mt-3 text-sm font-bold text-primary hover:underline"
+              >
+                {descExpanded ? 'Show less' : 'Read more'}
+              </button>
+            )}
+          </div>
 
           <div className="flex items-center gap-4 mt-6">
             <div className="flex items-center gap-2 border rounded-full px-2 py-1">
@@ -132,7 +148,7 @@ export default function ProductPage() {
               <span className="w-8 text-center font-bold">{qty}</span>
               <button onClick={()=> setQty(qty+1)} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">+</button>
             </div>
-            <span className="text-xs text-gray-500">Unit: {product.unit}</span>
+            {product.unit && <span className="text-sm font-bold text-gray-900">Unit: {product.unit}</span>}
           </div>
 
           <div className="grid grid-cols-2 gap-3 mt-6">

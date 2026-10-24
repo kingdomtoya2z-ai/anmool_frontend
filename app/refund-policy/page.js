@@ -21,7 +21,7 @@ const BLOCKS = [
   },
   {
     h: 'Refund timelines',
-    p: 'Approved refunds go to the original payment method: UPI/cards within 5–7 working days, Cash on Delivery orders via bank transfer (we will ask for your UPI ID or account details on call).',
+    p: 'Approved refunds go to the original payment method: UPI/cards within 5–7 working days. Please share your bank/UPI details if requested by our support team.',
   },
 ];
 
