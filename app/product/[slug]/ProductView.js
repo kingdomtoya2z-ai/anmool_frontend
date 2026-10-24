@@ -41,15 +41,30 @@ export default function ProductPage() {
     if (!slug) return;
     setLoading(true);
     setError('');
-    api.get(`/products/${slug}`).then(r=> {
-      setProduct(r.data);
-      setImgIdx(0);
-      api.get(`/products?category=${r.data.category?.slug}&limit=4`).then(rr=>{
-        setRelated((rr.data.products||rr.data).filter(p=>p._id!==r.data._id).slice(0,4));
-      }).catch(()=>{});
-    }).catch((e)=> {
-      setError(e.response?.status === 404 ? 'Product not found.' : 'Could not load this product. Check your internet and retry.');
-    }).finally(()=> setLoading(false));
+      api
+        .get(`/products/${slug}`)
+        .then((r) => {
+          setProduct(r.data);
+          setImgIdx(0);
+          api
+            .get(`/products?category=${r.data.category?.slug}&limit=4`)
+            .then((rr) => {
+              setRelated(
+                (rr.data.products || rr.data)
+                  .filter((p) => p._id !== r.data._id)
+                  .slice(0, 4)
+              );
+            })
+            .catch(() => {});
+        })
+        .catch((e) => {
+          setError(
+            e.response?.data?.message ||
+              e.message ||
+              'Could not load this product. Check your internet and retry.'
+          );
+        })
+        .finally(() => setLoading(false));
   };
 
   useEffect(() => {
