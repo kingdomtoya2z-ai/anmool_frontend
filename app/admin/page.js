@@ -4,6 +4,7 @@ import api from '@/lib/api';
 import { useAuth } from '@/lib/authContext';
 import toast from 'react-hot-toast';
 import SmartImage from '@/components/SmartImage';
+import { safeTrackingUrl } from '@/components/ShipmentCard';
 import Link from 'next/link';
 import {
   IconChart, IconBox, IconGrid, IconFlame, IconUsers, IconImage,
@@ -501,6 +502,8 @@ function OrdersTab({ orders, reload }) {
       list = list.filter(o =>
         (o.orderNumber || '').toLowerCase().includes(s) ||
         (o._id || '').toLowerCase().includes(s) ||
+        (o.consignmentId || '').toLowerCase().includes(s) ||
+        (o.courierPartner || '').toLowerCase().includes(s) ||
         (o.user?.name || '').toLowerCase().includes(s) ||
         (o.user?.email || '').toLowerCase().includes(s) ||
         (o.user?.phone || '').toLowerCase().includes(s) ||
@@ -535,7 +538,7 @@ function OrdersTab({ orders, reload }) {
   };
 
   const exportCSV = () => {
-    const rows = [['Order ID', 'Date', 'Customer', 'Phone', 'City', 'Items', 'Total', 'Payment', 'PayStatus', 'Status']];
+    const rows = [['Order ID', 'Date', 'Customer', 'Phone', 'City', 'Items', 'Total', 'Payment', 'PayStatus', 'Status', 'Courier', 'Consignment ID']];
     filtered.forEach(o => {
       rows.push([
         o.orderNumber || o._id,
@@ -545,6 +548,7 @@ function OrdersTab({ orders, reload }) {
         o.shippingAddress?.city || '',
         (o.items || []).map(i => `${i.name} x${i.quantity}`).join(' | '),
         o.total, o.paymentMethod, o.paymentStatus, o.orderStatus,
+        o.courierPartner || '', o.consignmentId || '',
       ]);
     });
     const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -640,7 +644,7 @@ function OrdersTab({ orders, reload }) {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mt-3">
           <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search order ID, name, phone, city, item…"
+            placeholder="Search order ID, name, phone, city, consignment ID, item…"
             className="w-full min-w-0 border border-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
           <select value={payFilter} onChange={e => setPayFilter(e.target.value)} className="w-full min-w-0 border border-gray-200 rounded-full px-4 py-2 text-sm bg-white">
             <option value="all">All payments</option>
@@ -688,6 +692,12 @@ function OrdersTab({ orders, reload }) {
                       {o.orderStatus === 'pending' && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" title="Needs action" />}
                     </div>
                     <div className="text-[11px] text-gray-500 truncate">{fmtDate(o.createdAt)} · {itemCount} item{itemCount === 1 ? '' : 's'}</div>
+                    {(o.courierPartner || o.consignmentId) && (
+                      <div className="text-[11px] font-semibold text-primary/80 truncate mt-0.5">
+                        <IconTruck className="w-3 h-3 inline-block mr-1 -mt-0.5" />
+                        {o.courierPartner || 'Courier'}{o.consignmentId ? ` · ${o.consignmentId}` : ''}
+                      </div>
+                    )}
                     {/* Customer line — visible on mobile (hidden on sm+ where the dedicated column shows) */}
                     <div className="text-[11px] text-gray-500 truncate sm:hidden">{o.user?.name || o.shippingAddress?.fullName || '—'} · {o.user?.phone || o.shippingAddress?.phone} · {o.shippingAddress?.city}</div>
                   </div>
@@ -807,6 +817,7 @@ function OrdersTab({ orders, reload }) {
                         <button onClick={() => copyId(o.orderNumber || o._id)} className="flex-1 text-[11px] font-bold border border-gray-200 rounded-full py-1.5 hover:border-primary hover:text-primary flex items-center justify-center gap-1"><IconCopy className="w-3.5 h-3.5" /> Copy ID</button>
                       </div>
                     </div>
+                    <CourierTrackingCard order={o} onSaved={() => reload(activeRange())} />
                     <div className="bg-white rounded-xl border p-4 text-xs space-y-1.5">
                       <div className="text-sm font-bold mb-2">Payment</div>
                       <div className="flex justify-between text-gray-600"><span>Subtotal</span><b>{fmtRs(o.subtotal)}</b></div>
@@ -842,6 +853,96 @@ function OrdersTab({ orders, reload }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Courier / consignment tracking (admin)                             */
+/* ------------------------------------------------------------------ */
+
+function CourierTrackingCard({ order, onSaved }) {
+  const [form, setForm] = useState({
+    courierPartner: order.courierPartner || '',
+    consignmentId: order.consignmentId || '',
+    trackingUrl: order.trackingUrl || '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  // Refresh the inputs when a different order is expanded or the row reloads.
+  useEffect(() => {
+    setForm({
+      courierPartner: order.courierPartner || '',
+      consignmentId: order.consignmentId || '',
+      trackingUrl: order.trackingUrl || '',
+    });
+  }, [order._id, order.courierPartner, order.consignmentId, order.trackingUrl]);
+
+  const savedUrl = safeTrackingUrl(form.trackingUrl);
+
+  const save = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.put(`/orders/${order._id}/tracking`, form);
+      toast.success('Courier tracking details saved — visible to the customer');
+      await onSaved?.();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save tracking details');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl border p-4">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-sm font-bold flex items-center gap-1.5">
+          <IconTruck className="w-4 h-4 text-primary" /> Courier &amp; Tracking
+        </div>
+        {savedUrl && (
+          <a href={savedUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold text-primary hover:underline shrink-0">
+            Open ↗
+          </a>
+        )}
+      </div>
+      <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
+        The customer sees this consignment ID and a <b>Track your product</b> button that opens the courier&apos;s own tracking page.
+      </p>
+      <form onSubmit={save} className="space-y-2.5 mt-3">
+        <Field label="Courier partner">
+          <input
+            value={form.courierPartner}
+            onChange={(e) => setForm({ ...form, courierPartner: e.target.value })}
+            placeholder="e.g. Delhivery, Blue Dart"
+            className={inputCls}
+          />
+        </Field>
+        <Field label="Consignment / AWB ID">
+          <input
+            value={form.consignmentId}
+            onChange={(e) => setForm({ ...form, consignmentId: e.target.value })}
+            placeholder="e.g. 1234567890123"
+            className={`${inputCls} font-semibold`}
+          />
+        </Field>
+        <Field label="Courier tracking page URL">
+          <input
+            type="url"
+            value={form.trackingUrl}
+            onChange={(e) => setForm({ ...form, trackingUrl: e.target.value })}
+            placeholder="https://www.delhivery.com/track/package"
+            className={inputCls}
+          />
+        </Field>
+        <button
+          type="submit"
+          disabled={saving}
+          className="w-full text-xs font-bold bg-primary text-white rounded-full py-2.5 hover:bg-primary-dark transition disabled:opacity-50"
+        >
+          {saving ? 'Saving…' : 'Save tracking details'}
+        </button>
+      </form>
     </div>
   );
 }

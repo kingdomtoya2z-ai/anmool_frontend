@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/authContext';
 import toast from 'react-hot-toast';
 import Loader from '@/components/Loader';
 import SmartImage from '@/components/SmartImage';
+import ShipmentCard from '@/components/ShipmentCard';
 import {
   IconBox,
   IconCamera,
@@ -501,6 +502,7 @@ function TrackInline({ orders }) {
           <div className="mt-4">
             <OrderTimeline order={result} />
           </div>
+          <ShipmentCard order={result} className="mt-4" />
           <div className="mt-4 space-y-2 text-sm border rounded-xl p-4 bg-cream/40">
             <div className="flex justify-between">
               <span className="text-gray-500">Items</span>

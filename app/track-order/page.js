@@ -3,6 +3,7 @@ import { useState, Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import SmartImage from '@/components/SmartImage';
+import ShipmentCard from '@/components/ShipmentCard';
 import Link from 'next/link';
 import PageHero from '@/components/PageHero';
 import {
@@ -121,6 +122,8 @@ function TrackInner() {
               </div>
             </div>
           )}
+
+          <ShipmentCard order={order} className="mt-6" />
 
           {/* Status history */}
           {order.statusHistory?.length > 0 && (

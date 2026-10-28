@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import SmartImage from '@/components/SmartImage';
+import ShipmentCard from '@/components/ShipmentCard';
 import {
   IconChevronDown,
   IconCopy,
@@ -180,6 +181,7 @@ export function OrderCard({ order, expanded, onToggle }) {
       {expanded && (
         <div className="border-t border-gray-100 bg-cream/30 p-4 md:p-5 animate-fadeIn">
           <OrderTimeline order={order} />
+          <ShipmentCard order={order} className="mt-4" />
           <div className="flex flex-wrap gap-2 mt-4">
             <button
               onClick={copyId}
